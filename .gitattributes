@@ -1,0 +1,5 @@
+# Check out text files with LF on every platform. The bundled skill is compared byte for byte
+# (after CRLF normalization) with the copy `install --skills` puts into a workspace, and Git for
+# Windows defaults to core.autocrlf=true, which would turn the checkout into CRLF and make that
+# comparison depend on the machine. Binaries are detected by text=auto.
+* text=auto eol=lf
