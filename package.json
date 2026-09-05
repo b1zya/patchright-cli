@@ -1,31 +1,58 @@
 {
-  "name": "@playwright/cli",
-  "version": "0.1.19",
-  "description": "Playwright CLI",
+  "name": "@b1zya/patchright-cli",
+  "version": "0.2.0",
+  "description": "Anti-detection browser CLI for AI agents: patchright-core daemon driven by a stealth-first client",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/microsoft/playwright-cli.git"
+    "url": "git+https://github.com/b1zya/patchright-cli.git"
   },
-  "homepage": "https://playwright.dev",
+  "homepage": "https://github.com/b1zya/patchright-cli#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "b1zya"
   },
   "license": "Apache-2.0",
-  "scripts": {
-    "test": "playwright test"
+  "bin": {
+    "patchright-cli": "bin/patchright-cli.js"
   },
-  "devDependencies": {
-    "@playwright/test": "1.63.0-alpha-2026-08-31",
-    "@types/node": "^25.2.1"
+  "files": [
+    "bin",
+    "lib",
+    "skills",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepare": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "sync-help": "tsx scripts/sync-help.ts",
+    "check-drift": "tsx scripts/check-drift.ts",
+    "validate-skill": "tsx scripts/validate-skill.ts",
+    "check": "tsc --noEmit && tsx scripts/sync-help.ts --check && tsx scripts/check-drift.ts && tsx scripts/validate-skill.ts",
+    "test": "patchright test",
+    "test:unit": "patchright test --project unit",
+    "test:integration": "patchright test --project integration",
+    "test:stealth": "patchright test --project stealth",
+    "roll": "tsx scripts/roll.ts",
+    "upstream:check": "tsx scripts/roll.ts --check",
+    "upstream:verify": "tsx scripts/roll.ts --verify",
+    "upstream:patch": "tsx scripts/upstream-patch.ts",
+    "watch:playwright-cli": "tsx scripts/watch-playwright-cli.ts",
+    "session-check": "node scripts/session-check.mjs --verbose"
   },
   "dependencies": {
-    "playwright": "1.63.0-alpha-2026-08-31",
-    "playwright-core": "1.63.0-alpha-2026-08-31"
+    "patchright-core": "1.62.3"
   },
-  "bin": {
-    "playwright-cli": "playwright-cli.js"
+  "devDependencies": {
+    "@types/node": "^25.2.1",
+    "esbuild": "^0.25.12",
+    "patchright": "1.62.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
   }
 }

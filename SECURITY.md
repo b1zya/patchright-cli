@@ -1,14 +1,5 @@
-<!-- BEGIN MICROSOFT SECURITY.MD V1.0.0 BLOCK -->
+# Security
 
-## Security
+Report vulnerabilities through GitHub's private vulnerability reporting on this repository (Security tab → Report a vulnerability), or open a private advisory. Do not file public issues for security problems.
 
-Microsoft takes the security of our software products and services seriously, which
-includes all source code repositories in our GitHub organizations.
-
-**Please do not report security vulnerabilities through public GitHub issues.**
-
-For security reporting information, locations, contact information, and policies,
-please review the latest guidance for Microsoft repositories at
-[https://aka.ms/SECURITY.md](https://aka.ms/SECURITY.md).
-
-<!-- END MICROSOFT SECURITY.MD BLOCK -->
+Scope: the CLI client, its configuration handling (proxy credentials, generated daemon config), and the way it launches and isolates browsers. Issues in `patchright-core` itself belong to https://github.com/Kaliiiiiiiiii-Vinyzu/patchright.

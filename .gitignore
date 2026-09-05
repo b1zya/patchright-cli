@@ -1,9 +1,15 @@
 node_modules/
 .vscode/
+/lib/
 /test-results/
-/.playwright-cli/
 # Ignore self-skill which is a build artifact
 .claude/skills/playwright-cli/
+.claude/skills/patchright-cli/
 .npmrc
-# Playwright CLI output (may contain credentials)
+# CLI output (may contain credentials)
 .playwright-cli/
+.patchright-cli/
+# skill evaluation workspace
+skills/patchright-cli-workspace/
+# roll workspace: reports, results and conflicted merges (scripts/roll.ts)
+/.roll/

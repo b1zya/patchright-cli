@@ -1,0 +1,15 @@
+patchright-cli
+Copyright (c) 2026 b1zya
+
+Licensed under the Apache License, Version 2.0.
+
+This product includes software developed by third parties:
+
+- Playwright (https://github.com/microsoft/playwright), Copyright (c) Microsoft Corporation, Apache-2.0.
+  src/*.ts are forked from packages/playwright-core/src/tools/cli-client/* and src/tools/utils/socketConnection.ts (v1.62.1);
+  skills/patchright-cli/ derives from the bundled playwright-cli skill; src/args.ts is Playwright's minimist port (MIT, James Halliday and contributors).
+- Patchright (https://github.com/Kaliiiiiiiiii-Vinyzu/patchright), Apache-2.0, used as the `patchright-core` dependency (daemon, browser tools, snapshot engine).
+- HumanCursor (https://github.com/riflosnake/HumanCursor), MIT: the pointer-trajectory algorithm in src/humanize/lib.ts follows its approach (Bezier curve through random knots, vertical distortion, eased resampling).
+- Camoufox (https://github.com/daijro/camoufox, MPL-2.0) and camoufox-cli (https://github.com/Bin-Huang/camoufox-cli): the identity-file model, the leak-warning pattern and the self-test corpus take ideas from these projects; no code was copied.
+
+vendor/ contains unmodified upstream sources kept only as merge bases: Playwright (Apache-2.0, Microsoft Corporation) at the tag recorded in scripts/upstream-snapshot/versions.json, and microsoft/playwright-cli (Apache-2.0). They are not part of the published package.

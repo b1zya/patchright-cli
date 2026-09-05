@@ -1,0 +1,25 @@
+name: Stealth online (manual)
+
+# Opens the public detector pages through `selftest --online` and uploads screenshots.
+# Never gates anything: datacenter IPs get challenged regardless of the browser posture.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  online:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: selftest --online
+        run: xvfb-run -a node bin/patchright-cli.js selftest --online || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selftest-online-screenshots
+          path: .patchright-cli/
+          if-no-files-found: warn
