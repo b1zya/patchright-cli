@@ -4,7 +4,22 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] - 2026-09-05
+
+First release as patchright-cli: the playwright-cli fork rebuilt as an anti-detection CLI for AI agents.
+
 ### Added
+- Own TypeScript client (forked from playwright-cli's cli-client) driving the untouched `patchright-core` daemon; own state root, session registry, sockets and skill installer, so a playwright-cli on the same machine is never touched.
+- Stealth defaults for `open`: real Google Chrome (Edge fallback), headed and maximized, persistent per-session profile, `viewport: null`, real OS color-scheme and motion preferences.
+- `--proxy` with geoip: timezone, `navigator.languages`/`Accept-Language` and geolocation derived from the exit IP; WebRTC restricted to proxied routes; credentials kept off the command line and out of `config-print`.
+- Identity file per profile, `identity`, `doctor` and `selftest` (38 main-world checks, `--online` detector tour).
+- Leak warnings for every deviation (`--headless`, `--device`, manual geo, routes, overlays, ...), two of them unsilenceable.
+- Guards: `run-code` safety scan, `eval --main-world`, `resize` moving the real window, `console` explained instead of re-enabling `Runtime.enable`, Firefox/WebKit and extension attach refused.
+- Optional humanized input (`--humanize`): Bézier pointer paths with deceleration, click hold times, per-character typing.
+- Layered configuration (`~/.patchright-cli/config.json`, `.playwright/patchright-cli.config.json`, `sessions.<name>`), generated daemon config, `check-drift` and `roll` tooling, CI on Windows/macOS/Linux, upstream watch.
+- Agent skill rewritten around the anti-detection contract.
 - `env`: how to run commands on this machine — shell quoting rules (PowerShell, cmd.exe, Git Bash, POSIX), agent host and sandbox markers, writable state root, console encoding, display, host locale/timezone, default browser; `--probe` checks network access.
 - `batch`: run a whole flow (open … close) from a script in one invocation, for sandboxes that kill background processes between tool calls and for permission modes that confirm every command.
 - Notice `msys-path-conversion` when Git Bash turned a leading-slash argument into a Windows path.
@@ -34,21 +49,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - `selftest --online` opens each detector in its own tab beside the local anchor page and closes any tabs a detector spawns, so a site that redirects, opens tabs or tears down its context no longer derails the rest of the tour.
 - `eval --main-world` with a bare expression (`document.title`) ran in the daemon instead of the page.
 - `console` explanation, warning and docs now say precisely what is missing (`console.*` calls and uncaught exceptions, which need `Runtime.enable`) and what is still listed (browser-level log entries: failed requests, CSP violations), instead of "the Console API is disabled".
-
-## [0.2.0] - 2026-09-05
-
-First release as patchright-cli: the playwright-cli fork rebuilt as an anti-detection CLI for AI agents.
-
-### Added
-- Own TypeScript client (forked from playwright-cli's cli-client) driving the untouched `patchright-core` daemon; own state root, session registry, sockets and skill installer, so a playwright-cli on the same machine is never touched.
-- Stealth defaults for `open`: real Google Chrome (Edge fallback), headed and maximized, persistent per-session profile, `viewport: null`, real OS color-scheme and motion preferences.
-- `--proxy` with geoip: timezone, `navigator.languages`/`Accept-Language` and geolocation derived from the exit IP; WebRTC restricted to proxied routes; credentials kept off the command line and out of `config-print`.
-- Identity file per profile, `identity`, `doctor` and `selftest` (38 main-world checks, `--online` detector tour).
-- Leak warnings for every deviation (`--headless`, `--device`, manual geo, routes, overlays, ...), two of them unsilenceable.
-- Guards: `run-code` safety scan, `eval --main-world`, `resize` moving the real window, `console` explained instead of re-enabling `Runtime.enable`, Firefox/WebKit and extension attach refused.
-- Optional humanized input (`--humanize`): Bézier pointer paths with deceleration, click hold times, per-character typing.
-- Layered configuration (`~/.patchright-cli/config.json`, `.playwright/patchright-cli.config.json`, `sessions.<name>`), generated daemon config, `check-drift` and `roll` tooling, CI on Windows/macOS/Linux, upstream watch.
-- Agent skill rewritten around the anti-detection contract.
 
 ### Removed
 - npm publishing, Microsoft-internal pipelines, Playwright test-generation references, `attach --extension`.
