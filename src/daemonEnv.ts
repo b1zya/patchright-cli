@@ -41,10 +41,27 @@ export function coreEnvOverrides(): Record<CoreEnvHook, string> {
   };
 }
 
-export function coreProcessEnv(extra?: Record<string, string | undefined>): NodeJS.ProcessEnv {
-  return { ...process.env, ...coreEnvOverrides(), ...extra };
+// The daemon also reads its own PLAYWRIGHT_MCP_* variables (headless, browser, executable,
+// user agent, viewport, init script, ...), which would bypass the stealth layer entirely: the
+// generated config is the only way in, so they are not passed to any core process. `doctor`
+// still reports them as set-but-ignored. The browser registry's own location variable is the
+// one core variable a user may need; it is exposed under this tool's name as well.
+export const ignoredCoreEnvPrefix = 'PLAYWRIGHT_MCP_';
+export const browsersPathVariable = 'PATCHRIGHT_CLI_BROWSERS_PATH';
+const coreBrowsersPathVariable = 'PLAYWRIGHT_BROWSERS_PATH';
+
+function browsersPathAlias(env: NodeJS.ProcessEnv): Record<string, string> {
+  const own = env[browsersPathVariable];
+  return own && !env[coreBrowsersPathVariable] ? { [coreBrowsersPathVariable]: own } : {};
 }
 
+export function coreProcessEnv(extra?: Record<string, string | undefined>): NodeJS.ProcessEnv {
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith(ignoredCoreEnvPrefix)));
+  return { ...inherited, ...browsersPathAlias(process.env), ...coreEnvOverrides(), ...extra };
+}
+
+// In-process, core is used for the registry and the help only, which never read the
+// PLAYWRIGHT_MCP_* variables; they stay in process.env so `doctor` can report them.
 export function applyCoreEnvInProcess(): void {
-  Object.assign(process.env, coreEnvOverrides());
+  Object.assign(process.env, browsersPathAlias(process.env), coreEnvOverrides());
 }

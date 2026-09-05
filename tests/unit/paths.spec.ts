@@ -18,7 +18,7 @@ import os from 'os';
 import path from 'path';
 import { test, expect } from 'patchright/test';
 
-import { coreEnvOverrides } from '../../src/daemonEnv';
+import { browsersPathVariable, coreEnvOverrides, coreProcessEnv } from '../../src/daemonEnv';
 import { cacheDir, daemonRoot, skillInstallCommand, skillInstallDir, socketsDir, stateRoot } from '../../src/paths';
 
 function withHome<T>(home: string | undefined, fn: () => T): T {
@@ -65,4 +65,27 @@ test('skill install targets and repair commands', () => {
   expect(skillInstallDir('agents', '/w')).toBe(path.join('/w', '.agents', 'skills', 'patchright-cli'));
   expect(skillInstallCommand('claude')).toBe('patchright-cli install --skills');
   expect(skillInstallCommand('agents', true)).toBe('patchright-cli install --skills=agents --global');
+});
+
+test('the daemon never sees the core\'s own PLAYWRIGHT_MCP_* overrides; the browsers path is exposed under this tool\'s name', () => {
+  const saved = { ...process.env };
+  try {
+    process.env.PLAYWRIGHT_MCP_HEADLESS = '0';
+    process.env.PLAYWRIGHT_MCP_USER_AGENT = 'Spoofed/1.0';
+    process.env[browsersPathVariable] = '/srv/browsers';
+    delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+    const env = withHome('/tmp/root', () => coreProcessEnv({ EXTRA: '1' }));
+    expect(Object.keys(env).filter(key => key.startsWith('PLAYWRIGHT_MCP_'))).toEqual([]);
+    expect(env.PLAYWRIGHT_BROWSERS_PATH).toBe('/srv/browsers');
+    expect(env.EXTRA).toBe('1');
+    expect(env.PWTEST_DAEMON_SESSION_DIR).toBeDefined();
+    // The core variable set by the user wins over the alias.
+    process.env.PLAYWRIGHT_BROWSERS_PATH = '/opt/pw';
+    expect(withHome('/tmp/root', () => coreProcessEnv()).PLAYWRIGHT_BROWSERS_PATH).toBe('/opt/pw');
+  } finally {
+    for (const key of Object.keys(process.env))
+      if (!(key in saved))
+        delete process.env[key];
+    Object.assign(process.env, saved);
+  }
 });

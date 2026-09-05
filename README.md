@@ -122,7 +122,7 @@ Credentials are handed to the browser context (never on the command line), the e
 patchright-cli env                  # this machine: shell quoting rules, console encoding, display, host locale/timezone, browser
 patchright-cli selftest             # 38 checks in the page main world of a throwaway session
 patchright-cli selftest --online    # + screenshots of sannysoft, browserscan, creepjs, fingerprint.com, iphey, pixelscan, brotector
-patchright-cli doctor               # browsers, versions, state dirs, leftover playwright-cli config, PLAYWRIGHT_MCP_* env
+patchright-cli doctor               # browsers, versions, state dirs, stray config files and ignored environment overrides
 ```
 
 The skill tells agents to run `env` once per session and follow its rules: PowerShell's `&` and `$`, cmd.exe's `^&`, Git Bash's conversion of leading-slash arguments into Windows paths (the CLI also warns when it sees one), consoles that are not UTF-8, Linux boxes without a display. The skill itself is plain Markdown with standard frontmatter and works with any agent that reads `SKILL.md` files (`.claude/skills/`, `.agents/skills/`, or copy the folder).
@@ -172,8 +172,8 @@ Everything outside `stealth` and `sessions` is passed to the daemon as its confi
 | `PATCHRIGHT_CLI_CONFIG` | global config file |
 | `PATCHRIGHT_CLI_QUIET_WARNINGS` | silence non-critical leak warnings |
 | `NO_UPDATE_NOTIFIER`, `CI` | skip the daily update and skill-drift check |
-| `PLAYWRIGHT_MCP_*` | read by the embedded daemon (headless, browser, user agent, viewport, ...); they bypass the stealth defaults and `doctor` flags them |
-| `PLAYWRIGHT_BROWSERS_PATH` | where `install-browser` puts the bundled Chromium |
+| `PATCHRIGHT_CLI_BROWSERS_PATH` | where `install-browser` puts the bundled Chromium and where it is looked for (the core's own `PLAYWRIGHT_BROWSERS_PATH` is honored too) |
+| `PLAYWRIGHT_MCP_*` | the core's own overrides (headless, browser, user agent, ...); not passed to the daemon, so they cannot bypass the stealth defaults; `doctor` reports them as set but ignored |
 
 ## Troubleshooting
 

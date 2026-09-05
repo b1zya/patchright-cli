@@ -26,7 +26,7 @@ patchright-cli selftest --json
 
 - `PASS`/`FAIL` are asserted, `INFO` is reported for you to judge, `SKIP` did not apply.
 - Expected `WARN`-class results on some machines: a software WebGL renderer inside a VM without GPU passthrough, `availWidth === width` on setups without a taskbar. Neither is critical, both are visible to detectors.
-- A failure in `automation` or `tamper` on a default launch means the environment is broken: run `doctor`, look for `PLAYWRIGHT_MCP_*` variables or a leftover `.playwright/cli.config.json`, and make sure a real Chrome is installed.
+- A failure in `automation` or `tamper` on a default launch means the environment is broken: run `doctor`, look at the stray config files and ignored environment overrides it reports, and make sure a real Chrome is installed.
 
 ## Online detectors
 

@@ -63,7 +63,7 @@ export async function collectDoctorReport(ctx: CommandContext, find = coreExecut
 
   const mcpEnv = Object.keys(process.env).filter(key => key.startsWith('PLAYWRIGHT_MCP_')).sort();
   if (mcpEnv.length)
-    issues.push(`Environment overrides read by the embedded daemon: ${mcpEnv.join(', ')}. They bypass the stealth defaults; unset them unless intended.`);
+    issues.push(`Set but ignored (not passed to the daemon, so they cannot bypass the stealth defaults): ${mcpEnv.join(', ')}. Use the config or the open flags instead, and unset them to avoid confusion.`);
   if (process.env[env.quietWarnings])
     issues.push(`${env.quietWarnings} is set: leak warnings are silenced.`);
 
