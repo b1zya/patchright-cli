@@ -32,9 +32,11 @@ async function resolvedConfig(env: Record<string, string> = {}): Promise<any> {
 
 test('the daemon sees our merged config and ignores a stray playwright-cli config', async ({}) => {
   const cwd = test.info().outputPath();
+  // Distinctive values that still leave a cold CI runner room to act: the first screenshot of
+  // a fresh Chrome on a Windows runner took longer than the 1234 ms this test once used.
   writeJson(path.join(cwd, '.playwright', 'patchright-cli.config.json'), {
-    timeouts: { action: 1234 },
-    sessions: { todo: { timeouts: { action: 4321 } } },
+    timeouts: { action: 12345 },
+    sessions: { todo: { timeouts: { action: 54321 } } },
   });
   // A playwright-cli project config in the same workspace must not leak into our daemon.
   // (The global ~/.playwright/cli.config.json is neutralized through PWTEST_CLI_GLOBAL_CONFIG,
@@ -45,13 +47,13 @@ test('the daemon sees our merged config and ignores a stray playwright-cli confi
 
   expect(await runCli(['open', 'data:text/html,hello'], env)).toEqual(expect.objectContaining({ exitCode: 0 }));
   const config = await resolvedConfig(env);
-  expect(config.timeouts.action).toBe(1234);
+  expect(config.timeouts.action).toBe(12345);
   expect(config.browser.browserName).toBe('chromium');
   expect(config.outputDir).toBe(path.join(cwd, '.patchright-cli'));
 
   // Output lands in our directory, not in .playwright-cli.
   const shot = await runCli(['screenshot']);
-  expect(shot.exitCode).toBe(0);
+  expect(shot.exitCode, shot.error || shot.output).toBe(0);
   expect(fs.readdirSync(path.join(cwd, '.patchright-cli')).some(f => f.endsWith('.png'))).toBe(true);
   expect(fs.existsSync(path.join(cwd, '.playwright-cli'))).toBe(false);
   expect(await runCli(['close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
@@ -63,7 +65,7 @@ test('the daemon sees our merged config and ignores a stray playwright-cli confi
 
   // Per-session overrides apply by session name.
   expect(await runCli(['-s=todo', 'open', 'data:text/html,todo'], env)).toEqual(expect.objectContaining({ exitCode: 0 }));
-  expect((await resolvedConfig({ ...env, PATCHRIGHT_CLI_SESSION: 'todo' })).timeouts.action).toBe(4321);
+  expect((await resolvedConfig({ ...env, PATCHRIGHT_CLI_SESSION: 'todo' })).timeouts.action).toBe(54321);
   expect(await runCli(['-s=todo', 'close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
 });
 
