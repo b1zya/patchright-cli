@@ -1,0 +1,193 @@
+name: Upstream roll (patchright-core)
+
+# Daily: when a newer patchright-core is on npm and at least 48 h old (its patcher breaks for
+# a few days after a Playwright release), roll it on a branch, run the full CI matrix on that
+# branch and open a pull request carrying the roll report (scripts/roll.ts):
+#   safe    nothing our client is forked from changed  -> merged automatically when CI is green
+#   review  upstream changes merged cleanly, but the client, daemon flags or skill moved
+#           -> the PR waits for a human (labels: upstream, needs-review)
+#   blocked a merge conflict, no merge base, or a missing PWTEST_* hook -> nothing is written;
+#           an issue (label upstream-blocked) carries the report and the conflicted merges,
+#           and scheduled runs skip that version while the issue is open
+# Manual runs can target a version, ignore the age gate, or only produce the report.
+
+on:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'patchright-core version (empty = latest on npm)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Report only; change nothing'
+        type: boolean
+        default: false
+      force:
+        description: 'Ignore the 48 h minimum age and an open blocked issue'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: upstream-roll
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      newer: ${{ steps.check.outputs.newer }}
+      target: ${{ steps.check.outputs.target }}
+      too_fresh: ${{ steps.check.outputs.too_fresh }}
+      open_issue: ${{ steps.issue.outputs.open_issue }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compare the pin with npm
+        id: check
+        run: |
+          npx tsx scripts/roll.ts --check ${{ inputs.version }} ${{ inputs.force && '--force' || '' }}
+          for key in newer target too_fresh; do
+            field=$key; [ "$key" = target ] && field=latest; [ "$key" = too_fresh ] && field=tooFresh
+            echo "$key=$(node -p "String(require('./.roll/check.json').$field)")" >> "$GITHUB_OUTPUT"
+          done
+          cat .roll/check.json
+      - name: Skip a version that already has a blocked issue
+        id: issue
+        if: steps.check.outputs.newer == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"patchright-core ${{ steps.check.outputs.target }}\"" --json number --jq 'length')
+          echo "open_issue=$([ "${n:-0}" != "0" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  roll:
+    needs: detect
+    if: needs.detect.outputs.newer == 'true' && needs.detect.outputs.too_fresh != 'true' && (needs.detect.outputs.open_issue != 'true' || inputs.force)
+    runs-on: ubuntu-latest
+    outputs:
+      classification: ${{ steps.roll.outputs.classification }}
+      branch: ${{ steps.push.outputs.branch }}
+      pushed: ${{ steps.push.outputs.pushed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Roll (three-way merge of the client layer, pins, help, snapshot)
+        id: roll
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          npx tsx scripts/roll.ts "${{ needs.detect.outputs.target }}" --force ${{ inputs.dry_run && '--dry-run' || '' }}
+          code=$?
+          set -e
+          echo "classification=$(node -p "require('./.roll/result.json').classification")" >> "$GITHUB_OUTPUT"
+          cat .roll/report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "0" ] && [ "$code" != "2" ]; then exit "$code"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: roll-report
+          path: .roll/
+          if-no-files-found: ignore
+      - name: Open an issue for a blocked roll
+        if: steps.roll.outputs.classification == 'blocked'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create upstream-blocked --description "upstream roll needs a manual port" --color B60205 2>/dev/null || true
+          {
+            cat .roll/report.md
+            for f in .roll/conflicts/*.merged; do
+              [ -f "$f" ] || continue
+              printf '\n### %s (merge with conflict markers; src is ours, vendor is the base)\n\n```\n' "$(basename "$f")"
+              head -300 "$f"
+              printf '```\n'
+            done
+            printf '\nResolve by hand: `npm run roll -- %s --dry-run` reproduces the merge; fix src/, then `npm run roll -- %s`.\n' "${{ needs.detect.outputs.target }}" "${{ needs.detect.outputs.target }}"
+          } > issue.md
+          gh issue create --title "upstream: patchright-core ${{ needs.detect.outputs.target }} needs a manual port" --body-file issue.md --label upstream-blocked
+      - name: Commit and push the roll branch
+        id: push
+        if: steps.roll.outputs.classification != 'blocked' && !inputs.dry_run
+        run: |
+          branch="roll_${{ needs.detect.outputs.target }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add -A
+          git commit -m "chore: roll patchright-core to ${{ needs.detect.outputs.target }}"
+          git push --force origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: [detect, roll]
+    if: needs.roll.outputs.pushed == 'true'
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.roll.outputs.branch }}
+
+  pull-request:
+    needs: [detect, roll, test]
+    if: always() && needs.roll.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ needs.roll.outputs.branch }}
+      TARGET: ${{ needs.detect.outputs.target }}
+      CLASSIFICATION: ${{ needs.roll.outputs.classification }}
+      CI_RESULT: ${{ needs.test.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.roll.outputs.branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: roll-report
+          path: .roll
+      - name: Create or update the pull request
+        id: pr
+        run: |
+          for label in upstream auto-merge needs-review tests-failed; do gh label create "$label" 2>/dev/null || true; done
+          labels="upstream"
+          case "$CLASSIFICATION" in
+            safe) labels="$labels,auto-merge" ;;
+            review) labels="$labels,needs-review" ;;
+          esac
+          [ "$CI_RESULT" = "success" ] || labels="$labels,tests-failed"
+          { cat .roll/report.md; printf '\nCI on this branch: **%s**\n' "$CI_RESULT"; } > body.md
+          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -z "$number" ]; then
+            gh pr create --base main --head "$BRANCH" --title "chore: roll patchright-core to $TARGET" --body-file body.md --label "$labels"
+            number=$(gh pr view "$BRANCH" --json number --jq .number)
+          else
+            gh pr edit "$number" --body-file body.md --add-label "$labels"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Merge automatically (safe roll, green CI)
+        if: env.CLASSIFICATION == 'safe' && env.CI_RESULT == 'success'
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch \
+            || gh pr comment "${{ steps.pr.outputs.number }}" --body "The roll is safe and CI is green, but the workflow could not merge (branch protection or repository settings). Merge by hand."
+      - name: Explain why the pull request stays open
+        if: env.CLASSIFICATION != 'safe' || env.CI_RESULT != 'success'
+        run: |
+          if [ "$CI_RESULT" != "success" ]; then
+            gh pr comment "${{ steps.pr.outputs.number }}" --body "CI result on this branch: $CI_RESULT. Not merged; see the workflow run for the failing job."
+          else
+            gh pr comment "${{ steps.pr.outputs.number }}" --body "Upstream changes merged cleanly but the client surface moved (see the report); a human review is required before merging."
+          fi

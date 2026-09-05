@@ -1,0 +1,141 @@
+name: Upstream watch (microsoft/playwright-cli)
+
+# Weekly: compare the commit recorded in scripts/upstream-snapshot/versions.json with the
+# upstream HEAD (scripts/watch-playwright-cli.ts). The one file we still carry a modified
+# copy of is three-way merged; files we rewrote are reported with their upstream patch.
+#   safe    only files this fork does not use changed -> bookkeeping PR, merged when CI is green
+#   review  a mapped file merged cleanly, or a rewritten file changed upstream -> PR waits
+#   blocked merge conflict -> issue with the report; nothing written
+
+on:
+  schedule:
+    - cron: '41 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report only; change nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: upstream-playwright-cli
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.watch.outputs.changed }}
+      classification: ${{ steps.watch.outputs.classification }}
+      head: ${{ steps.watch.outputs.head }}
+      branch: ${{ steps.push.outputs.branch }}
+      pushed: ${{ steps.push.outputs.pushed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compare with upstream HEAD
+        id: watch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          npx tsx scripts/watch-playwright-cli.ts
+          code=$?
+          set -e
+          for key in changed classification head; do
+            echo "$key=$(node -p "String(require('./.roll/playwright-cli-result.json').$key)")" >> "$GITHUB_OUTPUT"
+          done
+          [ -f .roll/playwright-cli-report.md ] && cat .roll/playwright-cli-report.md >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != "0" ] && [ "$code" != "2" ]; then exit "$code"; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-cli-report
+          path: .roll/
+          if-no-files-found: ignore
+      - name: Open an issue for a blocked merge
+        if: steps.watch.outputs.classification == 'blocked'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create upstream-blocked --description "upstream roll needs a manual port" --color B60205 2>/dev/null || true
+          short="${{ steps.watch.outputs.head }}"; short="${short:0:7}"
+          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"playwright-cli $short\"" --json number --jq 'length')
+          if [ "${n:-0}" = "0" ]; then
+            { cat .roll/playwright-cli-report.md; for f in .roll/conflicts/*.merged; do [ -f "$f" ] && { printf '\n### %s\n\n```\n' "$(basename "$f")"; head -300 "$f"; printf '```\n'; }; done; } > issue.md
+            gh issue create --title "upstream: playwright-cli $short conflicts with our test port" --body-file issue.md --label upstream-blocked
+          fi
+      - name: Apply, commit and push
+        id: push
+        if: steps.watch.outputs.changed == 'true' && steps.watch.outputs.classification != 'blocked' && !inputs.dry_run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          npx tsx scripts/watch-playwright-cli.ts --apply --head "${{ steps.watch.outputs.head }}"
+          short="${{ steps.watch.outputs.head }}"; short="${short:0:7}"
+          branch="track-playwright-cli_$short"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add -A
+          git commit -m "chore: track microsoft/playwright-cli at $short"
+          git push --force origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: track
+    if: needs.track.outputs.pushed == 'true'
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.track.outputs.branch }}
+
+  pull-request:
+    needs: [track, test]
+    if: always() && needs.track.outputs.pushed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRANCH: ${{ needs.track.outputs.branch }}
+      CLASSIFICATION: ${{ needs.track.outputs.classification }}
+      CI_RESULT: ${{ needs.test.result }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.track.outputs.branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: playwright-cli-report
+          path: .roll
+      - name: Create or update the pull request
+        id: pr
+        run: |
+          for label in upstream upstream-playwright-cli auto-merge needs-review tests-failed; do gh label create "$label" 2>/dev/null || true; done
+          labels="upstream,upstream-playwright-cli"
+          case "$CLASSIFICATION" in
+            safe) labels="$labels,auto-merge" ;;
+            review) labels="$labels,needs-review" ;;
+          esac
+          [ "$CI_RESULT" = "success" ] || labels="$labels,tests-failed"
+          { cat .roll/playwright-cli-report.md; printf '\nCI on this branch: **%s**\n' "$CI_RESULT"; } > body.md
+          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+          if [ -z "$number" ]; then
+            gh pr create --base main --head "$BRANCH" --title "chore: track microsoft/playwright-cli" --body-file body.md --label "$labels"
+            number=$(gh pr view "$BRANCH" --json number --jq .number)
+          else
+            gh pr edit "$number" --body-file body.md --add-label "$labels"
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+      - name: Merge automatically (nothing we use changed, green CI)
+        if: env.CLASSIFICATION == 'safe' && env.CI_RESULT == 'success'
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch \
+            || gh pr comment "${{ steps.pr.outputs.number }}" --body "Safe and green, but the workflow could not merge (branch protection or repository settings). Merge by hand."

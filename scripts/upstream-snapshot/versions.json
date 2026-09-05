@@ -1,0 +1,27 @@
+{
+  "patchrightCore": {
+    "version": "1.62.3",
+    "playwrightVersion": "1.62.1",
+    "playwrightTag": "v1.62.1",
+    "rolledAt": "2026-09-05",
+    "vendorSha256": {
+      "vendor/cli-client/program.ts": "7e618eb36cf48a74491532e4b4c7b32acf66e567606d44cf0f7841a5541266dd",
+      "vendor/cli-client/session.ts": "abf47a2b66b78e4cb030fa41a2bd392e1d95cf48c5c683452dbf397e6d59f45b",
+      "vendor/cli-client/registry.ts": "768a7ab4010b2b680d9ab8cc68fe13c1a2068b951a5e07b945ecdb3c20a3fbee",
+      "vendor/cli-client/output.ts": "2d4fbe6278d478e460c6a86db070a32bed57c9263b223c3b725529e092b08588",
+      "vendor/cli-client/channelSessions.ts": "8182f2a356e2f8a5092f762585004a6157658fab820e8d2d9a8558a4a99f351c",
+      "vendor/cli-client/cli.ts": "6166a1a007c1895ee4ee227b458b0bcfd895c06ceae85766c54caedb0a077717",
+      "vendor/cli-client/minimist.ts": "dadf26cffde850b45f9db94c7aad001bcdd86dac890c2b836a6004a77773688d",
+      "vendor/cli-client/socketConnection.ts": "e1fc5fa07e885c3461f620553697db35498d8ea6cd27d952cdeec37ce9853a39"
+    }
+  },
+  "playwrightCli": {
+    "repository": "microsoft/playwright-cli",
+    "commit": "655530f6d0dc71a0d6bf46ae165877d3c7311099",
+    "date": "2026-09-03T12:04:51-07:00",
+    "trackedAt": "2026-09-05",
+    "vendorSha256": {
+      "vendor/playwright-cli/tests/integration.spec.ts": "16e8a83a94ce268a916e17fca63b79c61375abf2fc870e15edcb251c824d6ed8"
+    }
+  }
+}

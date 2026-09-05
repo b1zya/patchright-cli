@@ -2,25 +2,60 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  # Reusable: the upstream workflows run the same matrix on a roll branch before opening
+  # its pull request (a PR created by the workflow token does not trigger CI on its own).
+  workflow_call:
+    inputs:
+      ref:
+        description: 'git ref to test (default: the caller ref)'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ inputs.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: ${{ matrix.os }} / node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15, windows-latest]
-    runs-on: ${{ matrix.os }}
+        # Google Chrome is preinstalled on all three runner images; no browser download needed.
+        os: [ubuntu-latest, windows-latest, macos-15]
+        node: [20, 22]
+        exclude:
+          - os: macos-15
+            node: 20
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - name: Use Node.js 20
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-      with:
-        node-version: '20'
-        cache: 'npm'
-    - name: Install dependencies
-      run: npm ci
-    - name: Run tests
-      run: npm run test
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, help sync and upstream drift
+        run: npm run check
+      - name: Environment report
+        run: node bin/patchright-cli.js doctor || echo "doctor reported issues (see above)"
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - name: Stealth tests (headed Chrome)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:stealth
+      - name: Stealth tests (headed Chrome)
+        if: runner.os != 'Linux'
+        run: npm run test:stealth
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.os }}-node${{ matrix.node }}
+          path: test-results/
+          if-no-files-found: ignore

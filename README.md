@@ -1,579 +1,198 @@
-# playwright-cli
+# patchright-cli
 
-Playwright CLI with SKILLS
+Anti-detection browser CLI for AI agents. A real Google Chrome driven through [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) (a patched Playwright that removes the CDP leaks automation is detected by), headless by default and headed when a task needs a visible window, one persistent identity per session, proxy-aware timezone, language and geolocation, and a warning every time you weaken any of it.
 
-### Playwright CLI vs Playwright MCP
+The command surface is [playwright-cli](https://github.com/microsoft/playwright-cli)'s: `open`, `snapshot`, `click e5`, `fill`, `screenshot`, sessions, storage, network and so on. The client is a fork of playwright-cli's; the daemon, the browser tools and the snapshot engine come unchanged from `patchright-core`, so the stealth patches are the dependency's and the stealth defaults, guards and diagnostics are this project's.
 
-This package provides CLI interface into Playwright. If you are using **coding agents**, that is the best fit.
+## Positioning
 
-- **CLI**: Modern **coding agents** increasingly favor CLI–based workflows exposed as SKILLs over MCP because CLI invocations are more token-efficient: they avoid loading large tool schemas and verbose accessibility trees into the model context, allowing agents to act through concise, purpose-built commands. This makes CLI + SKILLs better suited for high-throughput coding agents that must balance browser automation with large codebases, tests, and reasoning within limited context windows.
+| | playwright-cli | `patchright-cli` on npm | AhaiMk01/patchright-cli | this project |
+|---|---|---|---|---|
+| purpose | testing and automation | unrelated port | Python port | anti-detection automation for agents |
+| engines | Chromium, Firefox, WebKit | — | Chromium | Chromium (Chrome, Edge) |
+| daemon | playwright-core | — | hand-written Python | patchright-core, untouched |
+| console capture | yes | — | re-enables `Runtime.enable` (the primary leak) | unavailable by design, explained |
+| proxy → timezone/language/geo | no | — | passthrough only | derived from the exit IP |
+| identity | ephemeral by default | — | persistent profile | persistent profile + identity file |
+| humanized input | no | — | no | opt-in Bézier pointer paths and typing cadence |
+| self-test | no | — | no | `selftest`, `selftest --online`, `doctor` |
 
-- **MCP**: MCP remains relevant for specialized agentic loops that benefit from persistent state, rich introspection, and iterative reasoning over page structure, such as exploratory automation, self-healing tests, or long-running autonomous workflows where maintaining continuous browser context outweighs token cost concerns. Learn more about [Playwright MCP](https://github.com/microsoft/playwright-mcp).
+Because the `patchright-cli` npm name belongs to an unrelated project, this one installs from GitHub.
 
-### Key Features
+## Requirements
 
-- **Token-efficient**. Does not force page data into LLM.
+- Node.js 20 or newer.
+- Google Chrome (Microsoft Edge is the fallback). The bundled Chromium works but is detectable and warns.
+- Windows, macOS or Linux. Headless (the default) needs no display; `--headed` needs one (Linux: `xvfb-run -a`; macOS: a logged-in desktop session).
 
-### Requirements
-- Node.js 18 or newer
-- Claude Code, GitHub Copilot, or any other coding agent.
-
-## Getting Started
-
-## Installation
-
-```bash
-npm install -g @playwright/cli@latest
-playwright-cli --help
-```
-
-### Installing skills
-
-Claude Code, GitHub Copilot and others will use the locally installed skills.
+## Install
 
 ```bash
-playwright-cli install --skills
+npm install -g github:b1zya/patchright-cli
+# or a specific release
+npm install -g github:b1zya/patchright-cli#v0.2.0
+patchright-cli doctor
 ```
 
-### Skills-less operation
-
-Point your agent at the CLI and let it cook. It'll read the skill off `playwright-cli --help` on its own:
-
-```
-Test the "add todo" flow on https://demo.playwright.dev/todomvc using playwright-cli.
-Check playwright-cli --help for available commands.
-```
-
-## Demo
-
-```
-> Use playwright skills to test https://demo.playwright.dev/todomvc/.
-  Take screenshots for all successful and failing scenarios.
-```
-
-Your agent will be running commands, but it does not mean you can't play with it manually:
-
-```
-playwright-cli open https://demo.playwright.dev/todomvc/ --headed
-playwright-cli type "Buy groceries"
-playwright-cli press Enter
-playwright-cli type "Water flowers"
-playwright-cli press Enter
-playwright-cli check e21
-playwright-cli check e35
-playwright-cli screenshot
-```
-
-## Headed operation
-
-Playwright CLI is headless by default. If you'd like to see the browser, pass `--headed` to `open`:
+Then, in the project an agent will work in:
 
 ```bash
-playwright-cli open https://playwright.dev --headed
+patchright-cli install --skills          # .claude/skills/patchright-cli
+patchright-cli install --skills=agents   # .agents/skills/patchright-cli
 ```
 
-## Sessions
+Each GitHub release also carries the npm tarball as an asset for installs that must not run `prepare`.
 
-Playwright CLI keeps the browser profile in memory by default. Your cookies and storage state
-are preserved between CLI calls within the session, but lost when the browser closes. Use
-`--persistent` to save the profile to disk for persistence across browser restarts.
-
-You can use different instances of the browser for different projects with sessions. Pass `-s=` to
-the invocation to talk to a specific browser.
+## Quick start
 
 ```bash
-playwright-cli open https://playwright.dev
-playwright-cli -s=example open https://example.com --persistent
-playwright-cli list
+patchright-cli open https://example.com
+patchright-cli snapshot
+patchright-cli click e15
+patchright-cli fill e5 "user@example.com" --submit
+patchright-cli screenshot
+patchright-cli close
 ```
 
-You can run your coding agent with the `PLAYWRIGHT_CLI_SESSION` environment variable:
+For an agent: install the skill and ask it to "log in to ... undetected with patchright-cli". The skill carries the contract (what is guaranteed, what must not be done) up front.
+
+## Headless or headed
+
+`open` is headless by default: no window, nothing steals focus, and it works on servers, in CI, in containers and over SSH. `--headed` (alias `--headful`) opens a maximized real window. The mode is chosen in this order: an explicit flag, then `stealth.headless` in the config, then the environment (no usable display means headless), then the default (headless). `--headed` where no display exists is refused with the concrete reason for the platform (Linux: wrap the command in `xvfb-run -a`; macOS and Windows: run from the logged-in desktop session), never downgraded silently. `env` reports whether a display exists and whether a person could see it.
+
+The skill tells agents when a window is worth it (interactive login or a one-time code, CAPTCHAs and consent dialogs, `wait-for-user`, debugging that must be watched, a site that blocks or misrenders headless) and when it is not (reading a public site, exploring an app, collecting selectors, network calls or data for a parser, CI and repetitive runs). Anti-detection is a trade-off: headed removes the headless tells and is worth it for protection-sensitive tasks; the `headless` warning fires only together with `--proxy`. Platform notes (macOS privacy permissions and Gatekeeper, Windows console windows, Linux xvfb) are in the skill's [references/platforms.md](skills/patchright-cli/references/platforms.md).
+
+## Stealth defaults
+
+| default | value | why | override | warning |
+|---|---|---|---|---|
+| browser | Google Chrome, then Edge, then bundled Chromium | Patchright's validated configuration; real brands, codecs | `--browser=` | `bundled-chromium` (unsilenceable) |
+| mode | headless (no window); `--headed` for a maximized real window | the least intrusive mode that works everywhere; headed removes the headless tells when a task is protection-sensitive | `--headed`, `--headless`, config `stealth.headless` | `headless` (only together with `--proxy`) |
+| headed window | `--test-type=` added | Chrome shows an "unsupported command-line flag" bar for Patchright's `--disable-blink-features=AutomationControlled`; this switch (Playwright uses it for its own windows) suppresses it and is not page-visible as far as known | your own `--test-type` via `--extra-arg` or config | — |
+| profile | persistent, one per session | a warm profile is a returning visitor | `--isolated`, `--profile=` | — |
+| viewport | `null` (the real window) | no `setDeviceMetricsOverride` | config `contextOptions.viewport` | `viewport-emulation` |
+| color scheme, motion, contrast | `no-override` | Playwright forces light/no-motion by default | config | — |
+| user agent, locale, timezone | untouched | emulation is observable | `--locale`, `--timezone`, config | `manual-geo`, `user-agent` |
+| headless user agent | the headed user agent of the same Chrome build (`Chrome/<major>.0.0.0`, Chrome's frozen reduced form) | headless Chrome says `HeadlessChrome/<v>` in the page, in workers and in request headers, and every detector flags it; brands, full versions and platform are identical in both modes, so nothing else is touched | `--no-headless-user-agent`, config `stealth.headlessUserAgent: false` | note `headless-user-agent`; `headless-user-agent-unknown` when the browser version cannot be read |
+| with `--proxy` | timezone, language, geolocation from the exit IP; WebRTC restricted | an IP/timezone mismatch is the loudest signal | `--no-geoip` | `proxy-without-geoip` (unsilenceable) |
+| `eval` | isolated world | leaves nothing in the page | `--main-world` | `main-world-eval` |
+| `resize` (headed) | resizes the real window | no viewport emulation | — | — |
+| `run-code` | scanned; `unrouteAll()`, `Runtime.enable`, `--enable-automation` refused | they break the patches | `--force` (not for `Runtime.enable`) | `init-script-route`, `run-code-emulation` |
+| input | daemon tools (instant) | speed | `--humanize` | `humanize-limits` |
+
+Warnings go to stderr as `[patchright-cli] LeakWarning(<key>): ...`, or into `warnings[]` with `--json`. `PATCHRIGHT_CLI_QUIET_WARNINGS=1` silences all but the two unsilenceable ones.
+
+## Limitations
+
+| | |
+|---|---|
+| Firefox, WebKit | refused: Patchright patches Chromium only |
+| `attach --extension` | not supported |
+| `console` | `console.*` calls and uncaught exceptions from page scripts are not captured: Patchright never sends `Runtime.enable`; this tool does not re-enable it. Browser-level entries (failed requests, CSP violations) are still listed |
+| page globals in `eval` | isolated world by default; `--main-world` opts in |
+| `pdf` | needs a headless session |
+| Brotector-class input checks | CDP-dispatched events; humanize changes their shape, not their provenance |
+| init scripts | injected only into `http(s)` documents, by rewriting HTML (a timing attack could notice) |
+| WebSockets | not patched |
+| Windows timezone | applied through CDP emulation (no per-process `TZ`); workers stay consistent |
+
+## Sessions and identity
+
+A session nobody comes back to closes itself. The daemon is upstream code and keeps its browser until something sends `close`; an agent that opens a session, finishes and exits never does, and every leaked session keeps a Chrome running at full rate (microsoft/playwright-cli#460). So `open` starts a small watchdog next to the daemon: inside an agent harness (Codex, Claude Code, Copilot, Cursor, Gemini, Aider are recognised from their environment markers) the browser closes after 30 minutes without a command, and as soon as the agent process exits when the harness exposes its pid (`CLAUDE_PID`, or `PATCHRIGHT_CLI_OWNER_PID` for any harness). `--idle-timeout=2h` (or `idleTimeout` in the config) changes the limit, `--idle-timeout=0` and `--no-owner-pid` keep the browser open, `--owner-pid=<pid>` ties it to another process. Outside a harness nothing changes unless asked. The persistent profile survives, so the next `open` is still logged in; `list` shows each session's lifetime and `<session>.watchdog.log` in the state directory says why a browser went away. `kill-all` also stops watchdogs.
+
+`-s=<name>` (or `PATCHRIGHT_CLI_SESSION`) selects a session: its own daemon, Chrome window, persistent profile, identity and proxy. `identity` shows what a profile presents; `delete-data` discards it; `--isolated` opens a throwaway profile. Details: [skills/patchright-cli/references/identity.md](skills/patchright-cli/references/identity.md).
+
+`open` states the launch facts once, on its first line: browser and build, mode, profile, and the user agent when it is not the browser's own (`### Browser \`x\` opened with pid N: chrome 152, headless, profile ud-x-chrome, user agent Chrome/152 (headed name of this build)`). The executable path appears only for a non-standard browser (the bundled fallback, a configured `executablePath`); `--json` carries all of it as `launch`. Notes on `open` are one line of facts each, and no later command repeats them; paths are on demand in `list`, `identity`, `doctor` and `env`.
+
+## Proxy and geo
 
 ```bash
-PLAYWRIGHT_CLI_SESSION=todo-app claude .
+patchright-cli open https://example.com --proxy=http://user:pass@proxy.example:3128
 ```
 
-Or instruct it to prepend `-s=` to the calls.
+Credentials are handed to the browser context (never on the command line), the exit IP is resolved through the proxy, and timezone, `navigator.languages`/`Accept-Language` and coarse geolocation follow it. Details: [skills/patchright-cli/references/proxy-and-geo.md](skills/patchright-cli/references/proxy-and-geo.md).
 
-Manage your sessions as follows:
+## Humanize
+
+`open --humanize` (or `--humanize` on a single `click`, `dblclick`, `hover`, `drag`, `mousemove`, `mousewheel`, `type`, `fill`) replaces the instant tools with curved pointer paths that decelerate into the target, click hold times and per-character typing with pauses. `--no-humanize` forces the instant tool.
+
+## Health checks
 
 ```bash
-playwright-cli list                     # list all sessions
-playwright-cli close-all                # close all browsers
-playwright-cli kill-all                 # forcefully kill all browser processes
+patchright-cli env                  # this machine: shell quoting rules, console encoding, display, host locale/timezone, browser
+patchright-cli selftest             # 38 checks in the page main world of a throwaway session
+patchright-cli selftest --online    # + screenshots of sannysoft, browserscan, creepjs, fingerprint.com, iphey, pixelscan, brotector
+patchright-cli doctor               # browsers, versions, state dirs, leftover playwright-cli config, PLAYWRIGHT_MCP_* env
 ```
 
-## Monitoring
+The skill tells agents to run `env` once per session and follow its rules: PowerShell's `&` and `$`, cmd.exe's `^&`, Git Bash's conversion of leading-slash arguments into Windows paths (the CLI also warns when it sees one), consoles that are not UTF-8, Linux boxes without a display. The skill itself is plain Markdown with standard frontmatter and works with any agent that reads `SKILL.md` files (`.claude/skills/`, `.agents/skills/`, or copy the folder).
 
-Use `playwright-cli show` to open a visual dashboard that lets you see and control all running
-browser sessions. This is useful when your coding agents are running browser automation in the
-background and you want to observe their progress or step in to help.
+## Sandboxes and permission modes
+
+Agent harnesses (Codex CLI, Claude Code, Cursor, Copilot, CI containers) differ in what a command may do. `env` reports the host and sandbox markers, whether the state root is writable and, with `--probe`, whether the process has network. For sandboxes that kill background processes between tool calls, and for permission modes that confirm every command, `batch` runs a whole flow in one invocation:
 
 ```bash
-playwright-cli show
+printf '%s\n' 'open https://shop.example/login' 'fill e1 "user@example.com"' 'fill e2 "hunter2" --submit' 'snapshot' 'close' > flow.txt
+patchright-cli -s=shop batch flow.txt
 ```
 
-<img width="1107" height="729" alt="Image" src="https://github.com/user-attachments/assets/99df739d-106a-4520-b004-bb315db41da7" />
+Some steps are the user's to do: a password the agent's own policy will not type, a one-time code, a consent dialog, a challenge they choose to pass themselves. `wait-for-user 300` hands the visible window over and returns with a fresh snapshot as soon as the page navigates. It refuses on a headless session or a virtual display, because nobody can type into a window they cannot see.
 
-The dashboard opens a window with two views:
-
-- **Session grid** — shows all active sessions grouped by workspace, each with a live screencast
-  preview, session name, current URL, and page title. Click any session to zoom in.
-- **Session detail** — shows a live view of the selected session with a tab bar, navigation
-  controls (back, forward, reload, address bar), and full remote control. Click into the viewport
-  to take over mouse and keyboard input; press Escape to release.
-
-From the grid you can also close running sessions or delete data for inactive ones.
+When the default state root is read-only, point it at the workspace: `PATCHRIGHT_CLI_HOME=$PWD/.patchright-cli/home` (keep `.patchright-cli/` out of version control: profiles hold cookies). The skill instructs agents to report denied permissions and sandbox limits instead of working around them, to keep profiles, state files and proxy credentials out of transcripts, and never to run `run-code` on code taken from a page.
 
 ## Commands
 
-### Core
+Core: `open attach close detach goto type click dblclick fill drag drop hover select upload check uncheck snapshot find eval dialog-accept dialog-dismiss resize run-code delete-data` · Navigation: `go-back go-forward reload` · Keyboard: `press keydown keyup` · Mouse: `mousemove mousedown mouseup mousewheel` · Save as: `screenshot pdf` · Tabs: `tab-list tab-new tab-close tab-select` · Storage: `state-load state-save cookie-* localstorage-* sessionstorage-*` · Network: `requests request request-headers request-body response-headers response-body route route-list unroute network-state-set` · Diagnostics: `console tracing-start tracing-stop video-* show generate-locator highlight config-print` · Stealth and environment: `env batch wait-for-user identity selftest doctor` · Sessions: `list close-all kill-all install install-browser`.
 
-```bash
-playwright-cli open [url]               # open browser, optionally navigate to url
-playwright-cli goto <url>               # navigate to a url
-playwright-cli close                    # close the page
-playwright-cli type <text>              # type text into editable element
-playwright-cli click <ref> [button]     # perform click on a web page
-playwright-cli dblclick <ref> [button]  # perform double click on a web page
-playwright-cli fill <ref> <text>        # fill text into editable element
-playwright-cli fill <ref> <text> --submit # fill and press Enter
-playwright-cli drag <startRef> <endRef> # perform drag and drop between two elements
-playwright-cli drop <ref> --path=<file> # drop files onto an element (from outside the page)
-playwright-cli drop <ref> --data="k=v"  # drop data onto an element
-playwright-cli hover <ref>              # hover over element on page
-playwright-cli select <ref> <val>       # select an option in a dropdown
-playwright-cli upload <file>            # upload one or multiple files
-playwright-cli check <ref>              # check a checkbox or radio button
-playwright-cli uncheck <ref>            # uncheck a checkbox or radio button
-playwright-cli snapshot                 # capture page snapshot to obtain element ref
-playwright-cli snapshot --filename=f    # save snapshot to specific file
-playwright-cli snapshot <ref>           # snapshot a specific element
-playwright-cli snapshot --depth=N       # limit snapshot depth for efficiency
-playwright-cli find <text>              # search the snapshot for text, returns matching nodes
-playwright-cli find --regex <pattern>   # search the snapshot with a regexp
-playwright-cli eval <func> [ref]        # evaluate javascript expression on page or element
-playwright-cli dialog-accept [prompt]   # accept a dialog
-playwright-cli dialog-dismiss           # dismiss a dialog
-playwright-cli resize <w> <h>           # resize the browser window
-```
+`patchright-cli --help` and `patchright-cli <command> --help` are always current; the skill at [skills/patchright-cli/SKILL.md](skills/patchright-cli/SKILL.md) documents everything for agents.
 
-### Navigation
+## Configuration
 
-```bash
-playwright-cli go-back                  # go back to the previous page
-playwright-cli go-forward               # go forward to the next page
-playwright-cli reload                   # reload the current page
-```
+Global `~/.patchright-cli/config.json` (or `PATCHRIGHT_CLI_CONFIG`), then `.playwright/patchright-cli.config.json` under the workspace (or `--config=<file>`), then each file's `sessions.<name>` block, then command-line flags.
 
-### Keyboard
-
-```bash
-playwright-cli press <key>              # press a key on the keyboard, `a`, `arrowleft`
-playwright-cli keydown <key>            # press a key down on the keyboard
-playwright-cli keyup <key>              # press a key up on the keyboard
-```
-
-### Mouse
-
-```bash
-playwright-cli mousemove <x> <y>        # move mouse to a given position
-playwright-cli mousedown [button]       # press mouse down
-playwright-cli mouseup [button]         # press mouse up
-playwright-cli mousewheel <dx> <dy>     # scroll mouse wheel
-```
-
-### Save as
-
-```bash
-playwright-cli screenshot [ref]         # screenshot of the current page or element
-playwright-cli screenshot --filename=f  # save screenshot with specific filename
-playwright-cli screenshot --hires       # capture at full device pixel ratio
-playwright-cli pdf                      # save page as pdf
-playwright-cli pdf --filename=page.pdf  # save pdf with specific filename
-```
-
-### Tabs
-
-```bash
-playwright-cli tab-list                 # list all tabs
-playwright-cli tab-new [url]            # create a new tab
-playwright-cli tab-close [index]        # close a browser tab
-playwright-cli tab-select <index>       # select a browser tab
-```
-
-### Storage
-
-```bash
-playwright-cli state-save [filename]    # save storage state
-playwright-cli state-load <filename>    # load storage state
-
-# Cookies
-playwright-cli cookie-list [--domain]   # list cookies
-playwright-cli cookie-get <name>        # get a cookie
-playwright-cli cookie-set <name> <val>  # set a cookie
-playwright-cli cookie-delete <name>     # delete a cookie
-playwright-cli cookie-clear             # clear all cookies
-
-# LocalStorage
-playwright-cli localstorage-list        # list localStorage entries
-playwright-cli localstorage-get <key>   # get localStorage value
-playwright-cli localstorage-set <k> <v> # set localStorage value
-playwright-cli localstorage-delete <k>  # delete localStorage entry
-playwright-cli localstorage-clear       # clear all localStorage
-
-# SessionStorage
-playwright-cli sessionstorage-list      # list sessionStorage entries
-playwright-cli sessionstorage-get <k>   # get sessionStorage value
-playwright-cli sessionstorage-set <k> <v> # set sessionStorage value
-playwright-cli sessionstorage-delete <k>  # delete sessionStorage entry
-playwright-cli sessionstorage-clear     # clear all sessionStorage
-```
-
-### Network
-
-```bash
-playwright-cli route <pattern> [opts]   # mock network requests
-playwright-cli route-list               # list active routes
-playwright-cli unroute [pattern]        # remove route(s)
-```
-
-### DevTools
-
-```bash
-playwright-cli console [min-level]      # list console messages
-playwright-cli requests                 # list all network requests since loading the page
-playwright-cli request <index>          # show details for a specific request
-playwright-cli run-code <code>          # run playwright code snippet
-playwright-cli run-code --filename=f    # run playwright code from a file
-playwright-cli tracing-start            # start trace recording
-playwright-cli tracing-stop             # stop trace recording
-playwright-cli recording-start          # record user actions in the browser
-playwright-cli recording-stop           # stop recording, print actions as Playwright code
-playwright-cli video-start [filename]   # start video recording
-playwright-cli video-chapter <title>    # add a chapter marker to the video
-playwright-cli video-show-actions       # annotate each action with a callout in the video
-playwright-cli video-hide-actions       # stop annotating actions in the video
-playwright-cli video-stop               # stop video recording
-playwright-cli show                     # open the visual dashboard
-playwright-cli show --annotate          # launch dashboard for UI review / design feedback
-playwright-cli generate-locator <ref>   # generate a playwright locator for an element
-playwright-cli highlight <ref>          # show a persistent highlight overlay
-playwright-cli highlight <ref> --style= # highlight with a custom CSS style
-playwright-cli highlight <ref> --hide   # hide highlight on a specific element
-playwright-cli highlight --hide         # hide all page highlights
-```
-
-### Open parameters
-
-```bash
-playwright-cli open --browser=chrome    # use specific browser
-playwright-cli open --mobile            # emulate a generic mobile device
-playwright-cli open --device="iPhone 15" # emulate a specific device
-playwright-cli attach --extension=chrome # connect via Playwright Extension
-playwright-cli attach --cdp=chrome      # attach to running Chrome/Edge by channel
-playwright-cli attach --cdp=<url>       # attach via CDP endpoint
-playwright-cli detach                   # detach an attached session, leaves the external browser running
-playwright-cli open --persistent        # use persistent profile
-playwright-cli open --profile=<path>    # use custom profile directory
-playwright-cli open --config=file.json  # use config file
-playwright-cli close                    # close the browser
-playwright-cli delete-data              # delete user data for default session
-```
-
-### Snapshots
-
-After each command, playwright-cli provides a snapshot of the current browser state.
-
-```bash
-> playwright-cli goto https://example.com
-### Page
-- Page URL: https://example.com/
-- Page Title: Example Domain
-### Snapshot
-[Snapshot](.playwright-cli/page-2026-02-14T19-22-42-679Z.yml)
-```
-
-You can also take a snapshot on demand using `playwright-cli snapshot` command. All the options below can be combined as needed.
-
-```bash
-# default - save to a file with timestamp-based name
-playwright-cli snapshot
-
-# save to file, use when snapshot is a part of the workflow result
-playwright-cli snapshot --filename=after-click.yaml
-
-# snapshot an element instead of the whole page
-playwright-cli snapshot "#main"
-
-# limit snapshot depth for efficiency, take a partial snapshot afterwards
-playwright-cli snapshot --depth=4
-playwright-cli snapshot e34
-
-# include each element's bounding box as [box=x,y,width,height]
-playwright-cli snapshot --boxes
-
-# search a large snapshot instead of capturing it all — returns matching nodes
-# with 3 lines of context around each match (like grep -C)
-playwright-cli find "Add to cart"
-playwright-cli find --regex "\\$[0-9]+\\.[0-9]{2}"
-# wrap the regexp in slashes to add flags, e.g. /i for case-insensitive
-playwright-cli find --regex "/sign (in|up)/i"
-```
-
-### Targeting elements
-
-By default, use refs from the snapshot to interact with page elements.
-
-```bash
-# get snapshot with refs
-playwright-cli snapshot
-
-# interact using a ref
-playwright-cli click e15
-```
-
-You can also use css selectors or Playwright locators.
-
-```bash
-# css selector
-playwright-cli click "#main > button.submit"
-
-# role locator
-playwright-cli click "getByRole('button', { name: 'Submit' })"
-
-# test id
-playwright-cli click "getByTestId('submit-button')"
-```
-
-### Sessions
-
-```bash
-playwright-cli -s=name <cmd>            # run command in named session
-playwright-cli -s=name close            # stop a named browser
-playwright-cli -s=name delete-data      # delete user data for named browser
-playwright-cli list                     # list all sessions
-playwright-cli close-all                # close all browsers
-playwright-cli kill-all                 # forcefully kill all browser processes
-```
-
-### Local installation
-
-If global `playwright-cli` command is not available, try a local version via `npx playwright cli`:
-
-```bash
-npx --no-install playwright --version
-```
-
-When local version is available, use `npx playwright cli` in all commands. Otherwise, install `playwright-cli` as a global command:
-
-```bash
-npm install -g @playwright/cli@latest
-```
-
-## Configuration file
-
-The Playwright CLI can be configured using a JSON configuration file. You can specify the configuration file using the `--config` command line option:
-
-```bash
-playwright-cli --config path/to/config.json open example.com
-```
-
-Playwright CLI will load config from `.playwright/cli.config.json` by default so that you did not need to specify it every time.
-
-<details>
-<summary>Configuration file schema</summary>
-
-```typescript
+```json
 {
-  /**
-   * The browser to use.
-   */
-  browser?: {
-    /**
-     * The type of browser to use.
-     */
-    browserName?: 'chromium' | 'firefox' | 'webkit';
-
-    /**
-     * Keep the browser profile in memory, do not save it to disk.
-     */
-    isolated?: boolean;
-
-    /**
-     * Path to a user data directory for browser profile persistence.
-     * Temporary directory is created by default.
-     */
-    userDataDir?: string;
-
-    /**
-     * Launch options passed to
-     * @see https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context
-     *
-     * This is useful for settings options like `channel`, `headless`, `executablePath`, etc.
-     */
-    launchOptions?: playwright.LaunchOptions;
-
-    /**
-     * Context options for the browser context.
-     *
-     * This is useful for settings options like `viewport`.
-     */
-    contextOptions?: playwright.BrowserContextOptions;
-
-    /**
-     * Chrome DevTools Protocol endpoint to connect to an existing browser instance in case of Chromium family browsers.
-     */
-    cdpEndpoint?: string;
-
-    /**
-     * CDP headers to send with the connect request.
-     */
-    cdpHeaders?: Record<string, string>;
-
-    /**
-     * Timeout in milliseconds for connecting to CDP endpoint. Defaults to 30000 (30 seconds). Pass 0 to disable timeout.
-     */
-    cdpTimeout?: number;
-
-    /**
-     * Remote endpoint to connect to an existing Playwright server.
-     */
-    remoteEndpoint?: string;
-
-    /**
-     * Paths to TypeScript files to add as initialization scripts for Playwright page.
-     */
-    initPage?: string[];
-
-    /**
-     * Paths to JavaScript files to add as initialization scripts.
-     * The scripts will be evaluated in every page before any of the page's scripts.
-     */
-    initScript?: string[];
-  },
-
-  /**
-   * If specified, saves the Playwright video of the session into the output directory.
-   */
-  saveVideo?: {
-    width: number;
-    height: number;
-  };
-
-  /**
-   * The directory to save output files.
-   */
-  outputDir?: string;
-
-  /**
-   * Whether to save snapshots, console messages, network logs and other session logs to a file or to the standard output. Defaults to "stdout".
-   */
-  outputMode?: 'file' | 'stdout';
-
-  console?: {
-    /**
-     * The level of console messages to return. Each level includes the messages of more severe levels. Defaults to "info".
-     */
-    level?: 'error' | 'warning' | 'info' | 'debug';
-  },
-
-  network?: {
-    /**
-     * List of origins to allow the browser to request. Default is to allow all. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
-     */
-    allowedOrigins?: string[];
-
-    /**
-     * List of origins to block the browser to request. Origins matching both `allowedOrigins` and `blockedOrigins` will be blocked.
-     */
-    blockedOrigins?: string[];
-  };
-
-  /**
-   * Specify the attribute to use for test ids, defaults to "data-testid".
-   */
-  testIdAttribute?: string;
-
-  timeouts?: {
-    /*
-     * Configures default action timeout: https://playwright.dev/docs/api/class-page#page-set-default-timeout. Defaults to 5000ms.
-     */
-    action?: number;
-
-    /*
-     * Configures default navigation timeout: https://playwright.dev/docs/api/class-page#page-set-default-navigation-timeout. Defaults to 60000ms.
-     */
-    navigation?: number;
-  };
-
-  /**
-   * Whether to allow file uploads from anywhere on the file system.
-   * By default (false), file uploads are restricted to paths within the MCP roots only.
-   */
-  allowUnrestrictedFileAccess?: boolean;
-
-  /**
-   * Specify the language to use for code generation.
-   */
-  codegen?: 'typescript' | 'none';
+  "stealth": { "browser": "chrome", "humanize": true, "proxy": "http://user:pass@proxy.example:3128" },
+  "browser": { "contextOptions": { "locale": "de-DE" } },
+  "timeouts": { "action": 5000, "navigation": 60000 },
+  "sessions": {
+    "us": { "stealth": { "proxy": "http://user:pass@us.proxy.example:3128" } }
+  }
 }
 ```
 
-</details>
+Everything outside `stealth` and `sessions` is passed to the daemon as its configuration (`browser.launchOptions`, `browser.contextOptions`, `browser.initScript`, `network`, `timeouts`, `outputDir`, `secrets`, ...). A `.playwright/cli.config.json` left by playwright-cli is ignored; `doctor` points it out. `browser.launchOptions.executablePath` launches that file instead of an installed channel (a portable Chrome, an install outside the standard directories); it needs no channel on the machine, cannot be combined with `--browser`, and is warned about (`custom-executable`). The bundled Chromium counts as installed only when the revision this `patchright-core` wants is actually on disk (`PLAYWRIGHT_BROWSERS_PATH` or the platform cache directory); `doctor` shows what is found.
 
-<details>
-<summary>Configuration via env</summary>
+## Environment variables
 
-| Environment |
-|-------------|
-| `PLAYWRIGHT_MCP_ALLOWED_HOSTS` comma-separated list of hosts this server is allowed to serve from. Defaults to the host the server is bound to. Pass '*' to disable the host check. |
-| `PLAYWRIGHT_MCP_ALLOWED_ORIGINS` semicolon-separated list of TRUSTED origins to allow the browser to request. Default is to allow all. Important: *does not* serve as a security boundary and *does not* affect redirects. |
-| `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS` allow access to files outside of the workspace roots. Also allows unrestricted access to file:// URLs. By default access to file system is restricted to workspace root directories (or cwd if no roots are configured) only, and navigation to file:// URLs is blocked. |
-| `PLAYWRIGHT_MCP_BLOCKED_ORIGINS` semicolon-separated list of origins to block the browser from requesting. Blocklist is evaluated before allowlist. If used without the allowlist, requests not matching the blocklist are still allowed. Important: *does not* serve as a security boundary and *does not* affect redirects. |
-| `PLAYWRIGHT_MCP_BLOCK_SERVICE_WORKERS` block service workers |
-| `PLAYWRIGHT_MCP_BROWSER` browser or chrome channel to use, possible values: chrome, firefox, webkit, msedge. |
-| `PLAYWRIGHT_MCP_CAPS` comma-separated list of additional capabilities to enable, possible values: vision, pdf. |
-| `PLAYWRIGHT_MCP_CDP_ENDPOINT` CDP endpoint to connect to. |
-| `PLAYWRIGHT_MCP_CDP_HEADERS` CDP headers to send with the connect request, multiple can be specified. |
-| `PLAYWRIGHT_MCP_CDP_TIMEOUT` timeout for the CDP connection. |
-| `PLAYWRIGHT_MCP_CONFIG` path to the configuration file. |
-| `PLAYWRIGHT_MCP_CONSOLE_LEVEL` level of console messages to return: "error", "warning", "info", "debug". Each level includes the messages of more severe levels. |
-| `PLAYWRIGHT_MCP_DEVICE` device to emulate, for example: "iPhone 15" |
-| `PLAYWRIGHT_MCP_EXECUTABLE_PATH` path to the browser executable. |
-| `PLAYWRIGHT_MCP_EXTENSION` Connect to a running browser instance (Edge/Chrome only). Requires the "Playwright MCP Bridge" browser extension to be installed. |
-| `PLAYWRIGHT_MCP_GRANT_PERMISSIONS` List of permissions to grant to the browser context, for example "geolocation", "clipboard-read", "clipboard-write". |
-| `PLAYWRIGHT_MCP_HEADLESS` whether to run browser in headless mode, headless by default. |
-| `PLAYWRIGHT_MCP_IGNORE_HTTPS_ERRORS` ignore https errors |
-| `PLAYWRIGHT_MCP_INIT_PAGE` path to TypeScript file to evaluate on Playwright page object |
-| `PLAYWRIGHT_MCP_INIT_SCRIPT` path to JavaScript file to add as an initialization script. The script will be evaluated in every page before any of the page's scripts. Can be specified multiple times. |
-| `PLAYWRIGHT_MCP_ISOLATED` keep the browser profile in memory, do not save it to disk. |
-| `PLAYWRIGHT_MCP_SANDBOX` whether to enable the browser sandbox. |
-| `PLAYWRIGHT_MCP_OUTPUT_DIR` path to the directory for output files. |
-| `PLAYWRIGHT_MCP_PROXY_BYPASS` comma-separated domains to bypass proxy, for example ".com,chromium.org,.domain.com" |
-| `PLAYWRIGHT_MCP_PROXY_SERVER` specify proxy server, for example "http://myproxy:3128" or "socks5://myproxy:8080" |
-| `PLAYWRIGHT_MCP_SAVE_TRACE` Whether to save the Playwright Trace of the session into the output directory. |
-| `PLAYWRIGHT_MCP_SAVE_VIDEO` Whether to save the video of the session into the output directory. For example "--save-video=800x600" |
-| `PLAYWRIGHT_MCP_SECRETS_FILE` path to a file containing secrets in the dotenv format |
-| `PLAYWRIGHT_MCP_STORAGE_STATE` path to the storage state file for isolated sessions. |
-| `PLAYWRIGHT_MCP_TEST_ID_ATTRIBUTE` specify the attribute to use for test ids, defaults to "data-testid" |
-| `PLAYWRIGHT_MCP_TIMEOUT_ACTION` specify action timeout in milliseconds, defaults to 5000ms |
-| `PLAYWRIGHT_MCP_TIMEOUT_NAVIGATION` specify navigation timeout in milliseconds, defaults to 60000ms |
-| `PLAYWRIGHT_MCP_USER_AGENT` specify user agent string |
-| `PLAYWRIGHT_MCP_USER_DATA_DIR` path to the user data directory. If not specified, a temporary directory will be created. |
-| `PLAYWRIGHT_MCP_VIEWPORT_SIZE` specify browser viewport size in pixels, for example "1280x720" |
-</details>
+| variable | effect |
+|---|---|
+| `PATCHRIGHT_CLI_SESSION` | default session name |
+| `PATCHRIGHT_CLI_HOME` | state root (sessions, profiles, sockets); defaults to `<cache>/patchright-cli` |
+| `PATCHRIGHT_CLI_CONFIG` | global config file |
+| `PATCHRIGHT_CLI_QUIET_WARNINGS` | silence non-critical leak warnings |
+| `NO_UPDATE_NOTIFIER`, `CI` | skip the daily update and skill-drift check |
+| `PLAYWRIGHT_MCP_*` | read by the embedded daemon (headless, browser, user agent, viewport, ...); they bypass the stealth defaults and `doctor` flags them |
+| `PLAYWRIGHT_BROWSERS_PATH` | where `install-browser` puts the bundled Chromium |
 
-## Specific tasks
+## Troubleshooting
 
-The installed skill includes detailed reference guides for common tasks:
+- *No Chromium-based browser found*: install Google Chrome or Edge, or `patchright-cli install-browser chromium` (detectable fallback).
+- *DevTools remote debugging requires a non-default data directory*: Chrome refused to start on a redirected `HOME`/`USERPROFILE`; keep them real.
+- *Browser 'x' is not open*: `patchright-cli list`, then `open` again; stale daemons: `kill-all`.
+- Windows and `&` in URLs: `patchright-cli --% goto "https://example.com/?a=1&b=2"` in PowerShell, `^&` in `cmd.exe`.
+- Long paths on Linux: the daemon socket lives under `tmpdir`; set `TMPDIR` to something short if it complains.
 
-* **Running and Debugging Playwright tests** — run, debug and manage Playwright test suites
-* **Request mocking** — intercept and mock network requests
-* **Running Playwright code** — execute arbitrary Playwright scripts
-* **Browser session management** — manage multiple browser sessions
-* **Storage state (cookies, localStorage)** — persist and restore browser state
-* **Test generation (plan / generate / heal)** — generate Playwright tests from a spec or interactions
-* **Tracing** — record and inspect execution traces
-* **Video recording** — capture browser session videos
-* **Inspecting element attributes** — get element id, class, or any attribute not visible in the snapshot
+## Development
+
+`npm ci && npm run build && npm test` (the `stealth` project needs a display). Rolling `patchright-core` and releasing are described in [CONTRIBUTING.md](CONTRIBUTING.md) and `.claude/skills/dev/`.
+
+Upstream updates are a merge, not a re-port: `vendor/` holds the pristine sources every forked file came from (Playwright at the tag whose compiled client is byte-identical to the pinned `patchright-core`, and `microsoft/playwright-cli`), `src/` is this project's layer, and `npm run roll -- <version>` three-way merges upstream changes through them, stopping on conflicts instead of overwriting either side. `scripts/upstream-snapshot/versions.json` records the versions the checkout is based on. A daily workflow rolls new `patchright-core` releases on a branch, runs the CI matrix and opens the PR; only a roll that changed nothing this client is forked from is merged automatically, everything else waits for a review or, on a conflict, becomes an issue. `npm run roll -- <version> --dry-run` shows what an update would bring without changing anything; `node scripts/session-check.mjs` is a silent session-start check that only speaks when the checkout is inconsistent or a newer upstream exists.
+
+## Credits and license
+
+Apache-2.0. Built on [Playwright](https://github.com/microsoft/playwright) (Microsoft, Apache-2.0; the client in `src/` is forked from `playwright-core`'s `lib/tools/cli-client`, the skill from its bundled skill) and [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright) (Apache-2.0). The identity model, leak warnings and self-test corpus take ideas from [Camoufox](https://github.com/daijro/camoufox) and [camoufox-cli](https://github.com/Bin-Huang/camoufox-cli); the humanized pointer algorithm follows [HumanCursor](https://github.com/riflosnake/HumanCursor) (MIT). See [NOTICE](NOTICE).
+
+## Responsible use
+
+This tool is for legitimate automation of sites you are allowed to automate: research, QA against anti-bot vendors you contract with, your own accounts. Respect terms of service, robots policies and local law; it does not solve CAPTCHAs, and it will not help with fraud or account abuse. Provided without warranty.

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from 'patchright/test';
 
 export default defineConfig({
   testDir: './tests',
@@ -22,4 +22,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,
   reporter: 'list',
+  timeout: 60_000,
+  projects: [
+    { name: 'unit', testDir: './tests/unit' },
+    { name: 'integration', testDir: './tests/integration' },
+    // Real Chrome, headed: asserts the anti-detection posture of a default `open`.
+    { name: 'stealth', testDir: './tests/stealth', timeout: 90_000 },
+  ],
 });

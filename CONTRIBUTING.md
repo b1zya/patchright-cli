@@ -1,45 +1,42 @@
 # Contributing
 
-[Playwright CLI sources](https://github.com/microsoft/playwright/tree/main/packages/playwright/src/mcp/terminal) are located in the [Playwright monorepo](https://github.com/microsoft/playwright).
-
-### Clone
+## Setup
 
 ```bash
-git clone https://github.com/microsoft/playwright
-cd playwright
-npm i
+git clone https://github.com/b1zya/patchright-cli.git
+cd patchright-cli
+npm ci
+npm run build
+npm run check
+npm test
 ```
 
-### Build
+Google Chrome (or Edge) must be installed. The `unit` and `integration` projects run headless and need no display (the integration project is the headless verification: launch, navigate, read content, exit). The `stealth` project launches Chrome headed; on Linux without a display: `xvfb-run -a npm run test:stealth`.
 
-```bash
-npm run watch
-```
+## Layout and rules
 
-### Run
+Read [CLAUDE.md](CLAUDE.md): repo map, the provenance rule for `src/` (forked from playwright-cli, ported on every roll, never patched in `node_modules`), the commit convention and the stealth rules.
 
-```bash
-npm run playwright-cli open example.com -- --headed
-```
+## Pull request checklist
 
-### Test
+- `npm run check` and `npm test` pass locally.
+- A new command or flag has a help overlay entry, a guard decision, a line in `skills/patchright-cli/SKILL.md` and a test.
+- A new default that changes what the page can observe has a `LeakWarning` and a test.
+- `node bin/patchright-cli.js selftest` still passes; paste the summary line in the PR.
+- `CHANGELOG.md` has a line under Unreleased.
 
-```bash
-npm run test-playwright-cli
-```
+## Rolling patchright-core
 
-## Contributor License Agreement
+See [.claude/skills/dev/roll.md](.claude/skills/dev/roll.md): `npm run roll -- <version> --dry-run` prints the porting checklist; the pin is exact because patchright has no `next` tag and lags Playwright minors.
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+## Releasing
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+See [.claude/skills/dev/release.md](.claude/skills/dev/release.md): a GitHub release with the tarball attached; nothing is published to npm.
 
-### Code of Conduct
+## Conduct
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+Be direct and kind. Report abuse to the maintainers through GitHub.
+
+## Upstream updates
+
+`vendor/` holds the pristine sources every forked file came from and is never edited by hand; `src/` is this project's layer. `npm run roll -- <version>` merges a newer `patchright-core` through it (three-way, stops on conflicts), `npm run roll -- <version> --dry-run` only reports, `npm run watch:playwright-cli` does the same for `microsoft/playwright-cli`, and `scripts/upstream-snapshot/versions.json` records the versions the checkout is based on. The daily/weekly workflows in `.github/workflows/upstream-*.yml` roll on a branch, run CI and open the PR; only a roll that changed nothing we fork from is merged automatically. Details: `.claude/skills/dev/roll.md`.

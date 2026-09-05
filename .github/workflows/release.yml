@@ -1,0 +1,37 @@
+name: Release
+
+# On a published GitHub release: build, pack and attach the npm tarball, so the CLI can be
+# installed with `npm i -g <tarball url>` without relying on `prepare` during a git install.
+# There is no npm publish: the `patchright-cli` npm name belongs to an unrelated project.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  tarball:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - name: Verify the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "${{ github.event.release.tag_name }}" ]; then
+            echo "::error::package.json is $version but the release tag is ${{ github.event.release.tag_name }}"
+            exit 1
+          fi
+      - run: npm pack
+      - name: Attach the tarball to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" ./*.tgz --clobber
