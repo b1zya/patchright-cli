@@ -43,13 +43,28 @@ test('reduced user agent: frozen platform token, major version, zeros; Edge adds
     expect(reducedUserAgent(platform, 'chrome', '152')).not.toMatch(/Headless/);
 });
 
-test('windows: the version directory next to the executable, the newest one, without spawning anything', () => {
+test('windows: a single version directory next to the executable answers it without spawning anything', () => {
   const exe = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-  expect(detectBrowserMajor(exe, 'win32', io({ readdir: () => ['151.0.7900.10', '152.0.7977.82', 'chrome.exe', 'SetupMetrics'] }))).toBe('152');
+  expect(detectBrowserMajor(exe, 'win32', io({ readdir: () => ['152.0.7977.82', 'chrome.exe', 'SetupMetrics'] }))).toBe('152');
   expect(calls).toEqual([]);
-  expect(detectBrowserMajor(exe, 'win32', io({ readdir: () => ['152.0.7977.82', '153.0.8010.5'] }))).toBe('153');
   // A portable Chrome keeps the same layout at any path.
   expect(detectBrowserMajor('E:\\Portable\\GoogleChromePortable\\App\\Chrome-bin\\chrome.exe', 'win32', io({ readdir: () => ['152.0.7977.82', 'chrome.exe'] }))).toBe('152');
+});
+
+test('windows: a staged update leaves two version directories, and the executable says which build is served', () => {
+  // Chrome unpacks the next build beside the running one and keeps serving the old one until it
+  // restarts. Taking the newest directory would put a version in the user agent that the client
+  // hints contradict, which is exactly the mismatch a detector looks for.
+  const exe = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+  const staged = io({ readdir: () => ['152.0.7977.82', '153.0.8010.37', 'chrome.exe'], exec: (file, args, env) => { calls.push(file); return args.join(' ').includes('$env:PATCHRIGHT_CLI_EXE') && env?.PATCHRIGHT_CLI_EXE === exe ? '152.0.7977.82\r\n' : ''; } });
+  expect(detectBrowserMajor(exe, 'win32', staged)).toBe('152');
+  expect(calls).toEqual(['powershell']);
+  // Once the browser restarts into the new build, the executable reports it.
+  const restarted = io({ readdir: () => ['152.0.7977.82', '153.0.8010.37', 'chrome.exe'], exec: () => '153.0.8010.37\r\n' });
+  expect(detectBrowserMajor(exe, 'win32', restarted)).toBe('153');
+  // Unreadable version resource: the newest directory is the best guess left.
+  const unreadable = io({ readdir: () => ['152.0.7977.82', '153.0.8010.37'], exec: () => 'Get-Item : cannot find path' });
+  expect(detectBrowserMajor(exe, 'win32', unreadable)).toBe('153');
 });
 
 test('windows: a raw Chromium build has no version directory, so the file version is read through PowerShell with the path in the environment', () => {

@@ -60,11 +60,20 @@ export function majorOf(version: string | undefined): string | undefined {
 // The major version of a browser found on disk, read without launching a window. The bundled
 // Chromium normally never gets here: the core registry knows its version (browsers.ts).
 //   win32  - Chrome, Edge and portable Chrome keep the build in a `<version>\` directory next to
-//            the executable; a raw Chromium build has none, so the file's version resource is
-//            read through PowerShell, hidden (the path travels in an environment variable: a
-//            quoted path loses its backslashes on the way through the command line);
+//            the executable; one such directory answers it for free. A staged update adds a
+//            second one that the browser is not serving yet, and a raw Chromium build has none:
+//            both are settled by the executable's own version resource, read through PowerShell;
 //   darwin - Contents/Info.plist (CFBundleShortVersionString; plutil for a binary plist);
 //   linux  - `<executable> --version` prints "Google Chrome 152.0.7977.82" (Edge, Chromium alike).
+// The build `chrome.exe` itself reports: the executable carries the version resource of the
+// build it loads, and an update only rewrites it once the browser restarts into that build.
+// The path travels in an environment variable: a quoted path loses its backslashes on the way
+// through the command line.
+function readWindowsProductVersion(executablePath: string, io: VersionIo): string | undefined {
+  const output = io.exec('powershell', ['-NoProfile', '-NonInteractive', '-Command', '(Get-Item -LiteralPath $env:PATCHRIGHT_CLI_EXE).VersionInfo.ProductVersion'], { PATCHRIGHT_CLI_EXE: executablePath });
+  return output.match(fourPartVersion)?.[1];
+}
+
 export function detectBrowserMajor(executablePath: string, platform: NodeJS.Platform, io: VersionIo = defaultVersionIo): string | undefined {
   const p = platform === 'win32' ? path.win32 : path.posix;
   try {
@@ -74,10 +83,18 @@ export function detectBrowserMajor(executablePath: string, platform: NodeJS.Plat
           .filter((m): m is RegExpMatchArray => !!m)
           .map(m => m.slice(1, 5).map(Number))
           .sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2] || a[3] - b[3]);
+      // One directory is the installed build. Several means an update is staged next to the
+      // running one: Chrome keeps the old directory until it restarts into the new build, so
+      // the newest directory is a version the browser may not be serving yet, and claiming it
+      // in the user agent contradicts the client hints. Ask the launcher which build it loads.
+      if (versions.length === 1)
+        return String(versions[0][0]);
+      const active = readWindowsProductVersion(executablePath, io);
+      if (active)
+        return active;
       if (versions.length)
         return String(versions[versions.length - 1][0]);
-      const output = io.exec('powershell', ['-NoProfile', '-NonInteractive', '-Command', '(Get-Item -LiteralPath $env:PATCHRIGHT_CLI_EXE).VersionInfo.ProductVersion'], { PATCHRIGHT_CLI_EXE: executablePath });
-      return output.match(fourPartVersion)?.[1];
+      return undefined;
     }
     if (platform === 'darwin') {
       // <App>.app/Contents/MacOS/<executable> -> <App>.app/Contents/Info.plist
