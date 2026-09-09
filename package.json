@@ -20,7 +20,7 @@
   "files": [
     "bin",
     "lib",
-    "skills",
+    "skills/patchright-cli",
     "README.md",
     "LICENSE",
     "NOTICE",
