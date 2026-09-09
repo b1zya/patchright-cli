@@ -4,9 +4,17 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- `recording-start` / `recording-stop` (new upstream commands): record what you do in the window and print it back as code. They carry the new `recorder-injection` warning, because the recorder puts a `__pw_recorder` binding on the page main world and an overlay element on every page until it is stopped.
+- `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.
+
 ### Fixed
+- Windows: a staged Chrome update no longer puts a version in the user agent that the browser is not serving. Chrome unpacks the next build into a second `<version>\` directory beside the running one and keeps serving the old build until it restarts, so the newest directory could disagree with the client hints (user agent `Chrome/153`, `uaFullVersion` `152.0.7977.82`) — the exact contradiction a detector looks for. With more than one directory the executable's own version resource decides.
 - Upstream roll: a repository with issues disabled (a fork has them off by default) no longer fails the `detect` job. The blocked-issue lookup warns and continues, and a blocked roll that cannot open an issue says so with the report in the job summary and the artifact.
 - `npm pack` from a working tree no longer picks up the ignored `skills/patchright-cli-workspace/` evaluation runs: `files` names `skills/patchright-cli` instead of `skills`. Release tarballs, built from a clean checkout, are unchanged.
+
+### Upstream
+- `patchright-core` 1.62.3 -> 1.63.0 (Playwright v1.63.0 sources; patchright fixed closed shadow roots and a negative nth selector boundary). The client layer was ported by hand: upstream rewrote `install` around its own `--init-workspace`, which we deliberately do not spawn, and touched the same lines as the product rename, our activity watchdog and the daemon environment. `npm run roll` gained `--resolved` for exactly this case: a conflict where our side stays never merges cleanly on a rerun, because the base only moves once the roll lands.
 
 ## [0.2.0] - 2026-09-05
 

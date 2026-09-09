@@ -40,6 +40,7 @@ export type LeakKey =
   | 'main-world-eval'
   | 'console-unavailable'
   | 'highlight-dom'
+  | 'recorder-injection'
   | 'tracing'
   | 'cdp-attach'
   | 'channel-changed'
@@ -128,6 +129,10 @@ export const catalog: Record<LeakKey, CatalogEntry> = {
   'highlight-dom': {
     severity: 'MEDIUM',
     message: 'This injects overlay DOM into the page, visible to MutationObserver-based scripts.',
+  },
+  'recorder-injection': {
+    severity: 'HIGH',
+    message: 'The recorder installs a `__pw_recorder` binding on the page main world and an overlay element on every page until `recording-stop`; a script that enumerates window properties sees it. Record on your own pages, not on a protected one.',
   },
   'tracing': {
     severity: 'LOW',

@@ -17,6 +17,7 @@
 // Rolls the patchright-core pin and carries our client layer forward.
 //
 //   tsx scripts/roll.ts [version|latest] [--dry-run] [--json] [--force] [--min-age-hours N]
+//   tsx scripts/roll.ts <version> --resolved  the conflicts were ported into src/ by hand
 //   tsx scripts/roll.ts --check [--json]      is there a newer release, and is it old enough?
 //   tsx scripts/roll.ts --verify              vendor/ and the pin still match upstream (network)
 //
@@ -56,6 +57,7 @@ const positional = argv.filter(arg => !arg.startsWith('--'));
 const dryRun = flags.has('--dry-run');
 const json = flags.has('--json');
 const force = flags.has('--force');
+const resolved = flags.has('--resolved');
 const minAgeHours = Number(argv[argv.indexOf('--min-age-hours') + 1]) || 48;
 const packageJsonPath = path.join(root, 'package.json');
 
@@ -268,11 +270,18 @@ async function main(): Promise<void> {
     }
   }
   const verdict = classifyRoll(analysis);
-  const blocked = verdict.classification === 'blocked';
+  // A conflict where we deliberately keep our side (the product rename, our own install path,
+  // the daemon environment) never merges cleanly on a rerun: the base only moves once the roll
+  // lands. `--resolved` says the hunks were ported into src/ by hand, so the conflicted files
+  // are left exactly as they are and the rest of the roll proceeds. Other blockers -- no merge
+  // base, a missing PWTEST_* hook -- still stop everything.
+  const conflicts = analysis.merges.filter(merge => merge.status === 'conflict').length;
+  const onlyConflicts = conflicts > 0 && verdict.reasons.length === conflicts;
+  const blocked = verdict.classification === 'blocked' && !(resolved && onlyConflicts);
   const willApply = !dryRun && !blocked;
   const report = renderRollReport(analysis, verdict, { dryRun, applied: willApply });
   writeRollArtifact('report.md', report);
-  writeRollArtifact('result.json', JSON.stringify({ ...verdict, current, target, playwright: analysis.playwright?.tag, dryRun, applied: willApply, merges: analysis.merges.map(m => ({ file: m.file.ours, status: m.status, conflicts: m.conflicts })) }, null, 2) + '\n');
+  writeRollArtifact('result.json', JSON.stringify({ ...verdict, current, target, playwright: analysis.playwright?.tag, dryRun, applied: willApply, resolvedByHand: resolved && onlyConflicts, merges: analysis.merges.map(m => ({ file: m.file.ours, status: m.status, conflicts: m.conflicts })) }, null, 2) + '\n');
   for (const merge of analysis.merges) {
     if (merge.status === 'conflict')
       writeRollArtifact(path.join('conflicts', path.basename(merge.file.ours) + '.merged'), merge.merged);
@@ -284,9 +293,11 @@ async function main(): Promise<void> {
     return;
   }
   if (blocked) {
-    console.error('\nBlocked: nothing was written. Resolve the conflicts from .roll/conflicts/ by hand (src/ is ours, vendor/ is the base), then rerun.');
+    console.error('\nBlocked: nothing was written. Resolve the conflicts from .roll/conflicts/ by hand (src/ is ours, vendor/ is the base), then rerun with --resolved.');
     process.exit(2);
   }
+  if (resolved && onlyConflicts)
+    console.log(`\nTaking src/ as hand-resolved for: ${analysis.merges.filter(m => m.status === 'conflict').map(m => m.file.ours).join(', ')}.`);
   apply(analysis, pkg);
   console.log(`\nApplied. Next: npm run check && npm test, node bin/patchright-cli.js selftest, an Upstream line in CHANGELOG.md, commit "chore: roll patchright-core to ${target}".`);
 }

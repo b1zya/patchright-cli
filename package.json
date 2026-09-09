@@ -46,12 +46,12 @@
     "session-check": "node scripts/session-check.mjs --verbose"
   },
   "dependencies": {
-    "patchright-core": "1.62.3"
+    "patchright-core": "1.63.0"
   },
   "devDependencies": {
     "@types/node": "^25.2.1",
     "esbuild": "^0.25.12",
-    "patchright": "1.62.3",
+    "patchright": "1.63.0",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   }
