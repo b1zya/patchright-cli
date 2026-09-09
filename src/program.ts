@@ -84,6 +84,7 @@ const booleanOptions: string[] = [
   'raw',
   'version',
   'headful', // alias for --headed; keep it a boolean so it never swallows the next arg
+  'g', // alias for --global, normalized above; boolean so it never swallows the next arg
 ];
 
 export async function program(options?: { embedderVersion?: string }) {
@@ -97,6 +98,11 @@ export async function program(options?: { embedderVersion?: string }) {
   if (args.s) {
     args.session = args.s;
     delete args.s;
+  }
+  // Normalize -g alias to --global
+  if (args.g) {
+    args.global = true;
+    delete args.g;
   }
 
   const output: Output = args.json ? new JsonOutput() : new TextOutput();
@@ -223,6 +229,9 @@ export async function program(options?: { embedderVersion?: string }) {
       return;
     }
     case 'install':
+      // --global only decides where the skill goes, so it means nothing on its own.
+      if (args.global && !args.skills)
+        output.errorInstallGlobalRequiresSkills();
       output.installed(await installWorkspace(args, clientInfo));
       return;
     case 'install-browser':

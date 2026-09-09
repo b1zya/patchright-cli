@@ -1,6 +1,6 @@
 # Platforms: Linux, Windows, macOS
 
-Read this when `patchright-cli env` reports no display or a virtual one, when `--headed` is refused, when a browser fails to start on macOS, or when a console window flashes on Windows. The decision between headless and headed is in SKILL.md ("Headless or headed"); this file is what each platform adds to it.
+Read this when `patchright-cli env` reports no display or a virtual one, when `--headed` is refused, when a browser fails to start on macOS, or when a console window appears on Windows. The decision between headless and headed is in SKILL.md ("Headless or headed"); this file is what each platform adds to it.
 
 ## What the tool actually does, on every platform
 
@@ -24,7 +24,6 @@ Read this when `patchright-cli env` reports no display or a virtual one, when `-
 - Console windows (investigated on Windows 11 with a window-enumeration probe, and in the sources):
   - Every process this client starts (the daemon, its own re-invocations for `batch` and `selftest`, the `chcp` probe, the PowerShell used by `kill-all`) is created with `windowsHide` (`CREATE_NO_WINDOW`); a unit test keeps it that way. `open` shows nothing in headless mode, and only the Chrome window in headed mode.
   - The browser binary is started by patchright-core without `windowsHide`. That is harmless: `chrome.exe` and `msedge.exe` are GUI-subsystem executables and never get a console.
-  - What can flash briefly at `close`: the core force-kills the browser through a `taskkill` started via a shell without a hidden window; the daemon has no console, so Windows allocates one, which on Windows 11 opens the default terminal application for a fraction of a second. That is core behavior (a newer core hides the window; the roll checklist verifies it) and there is no safe client-side way around it: the daemon must run detached and without a console to outlive the client, so any console child it starts gets a new console.
 - If a window still appears at `open`, it is not this tool: check the shell wrapper or the harness that started `patchright-cli`.
 
 ## macOS

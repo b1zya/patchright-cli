@@ -56,6 +56,7 @@ Anti-bot vendors test each layer over and over; a single inconsistency is enough
 | `init-script-route` | MEDIUM | `run-code` using `addInitScript`/`exposeFunction`/`clock.install` |
 | `run-code-emulation` | MEDIUM | `run-code` using `setViewportSize`, `setUserAgent`, `Emulation.*` |
 | `highlight-dom` | MEDIUM | `highlight`, `video-show-actions` |
+| `recorder-injection` | HIGH | `recording-start`: a `__pw_recorder` binding and an overlay element on the page until `recording-stop` |
 | `locale-emulation` | LOW | macOS: locale set through CDP |
 | `route-cache` | LOW | routes disable the browser cache |
 | `main-world-eval` | LOW | `eval --main-world` |

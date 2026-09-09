@@ -174,6 +174,10 @@ function guardCommandInner(name: string, args: MinimistArgs, ctx: CommandContext
       return args.hide ? { kind: 'allow' } : { kind: 'allow', warnings: [leak('highlight-dom')] };
     case 'video-show-actions':
       return { kind: 'allow', warnings: [leak('highlight-dom')] };
+    // The recorder exposes `__pw_recorder` on the page main world and keeps an overlay element
+    // there until `recording-stop`; allowed for your own pages, never silent.
+    case 'recording-start':
+      return { kind: 'allow', warnings: [leak('recorder-injection')] };
     case 'tracing-start':
       return { kind: 'allow', warnings: [leak('tracing')] };
     case 'pdf': {

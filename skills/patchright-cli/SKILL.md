@@ -33,6 +33,7 @@ patchright-cli drives a real Google Chrome through Patchright, a browser driver 
 | `attach --extension` | not supported | `attach --cdp=...` (your browser, your leaks) |
 | `pdf` on a headed session | needs headless Chromium | the default headless session, `screenshot`, or a throwaway `open --headless --isolated` |
 | `highlight`, `video-show-actions`, `show --annotate` on protected pages | they inject DOM the page can observe | use them on your own pages |
+| `recording-start` on protected pages | the recorder adds a `__pw_recorder` binding to the page main world and an overlay element, on every page, until `recording-stop` | record on your own pages; drive a protected site with the normal commands |
 | mix proxies inside one session, or `state-load` another identity's state | burns the identity | one session = one identity = one proxy |
 | solve or repeatedly click CAPTCHAs / challenges | detectable and outside the tool's scope | wait, re-snapshot, report to the user |
 
@@ -268,6 +269,9 @@ patchright-cli run-code "async page => await page.context().grantPermissions(['g
 patchright-cli run-code --filename=script.js
 patchright-cli tracing-start
 patchright-cli tracing-stop
+# record what you do in the window and print it back as code; warns, and shows in the page
+patchright-cli recording-start
+patchright-cli recording-stop
 patchright-cli video-start video.webm
 patchright-cli video-chapter "Chapter Title" --description="Details" --duration=2000
 patchright-cli video-stop
