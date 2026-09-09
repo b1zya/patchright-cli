@@ -68,7 +68,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"patchright-core ${{ steps.check.outputs.target }}\"" --json number --jq 'length')
+          # Issues can be off (a fork disables them by default): then no version is blocked.
+          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"patchright-core ${{ steps.check.outputs.target }}\"" --json number --jq 'length' 2>&1) || {
+            echo "::warning::Could not list issues ($n); assuming no blocked issue for this version."
+            n=0
+          }
           echo "open_issue=$([ "${n:-0}" != "0" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   roll:
@@ -119,7 +123,10 @@ jobs:
             done
             printf '\nResolve by hand: `npm run roll -- %s --dry-run` reproduces the merge; fix src/, then `npm run roll -- %s`.\n' "${{ needs.detect.outputs.target }}" "${{ needs.detect.outputs.target }}"
           } > issue.md
-          gh issue create --title "upstream: patchright-core ${{ needs.detect.outputs.target }} needs a manual port" --body-file issue.md --label upstream-blocked
+          gh issue create --title "upstream: patchright-core ${{ needs.detect.outputs.target }} needs a manual port" --body-file issue.md --label upstream-blocked || {
+            echo "::error::The roll is blocked and the issue could not be opened (are issues enabled on this repository?). The report is in the job summary and the roll-report artifact."
+            exit 1
+          }
       - name: Commit and push the roll branch
         id: push
         if: steps.roll.outputs.classification != 'blocked' && !inputs.dry_run

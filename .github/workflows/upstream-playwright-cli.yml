@@ -68,10 +68,17 @@ jobs:
         run: |
           gh label create upstream-blocked --description "upstream roll needs a manual port" --color B60205 2>/dev/null || true
           short="${{ steps.watch.outputs.head }}"; short="${short:0:7}"
-          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"playwright-cli $short\"" --json number --jq 'length')
+          # Issues can be off (a fork disables them by default): then nothing is on file yet.
+          n=$(gh issue list --label upstream-blocked --state open --search "in:title \"playwright-cli $short\"" --json number --jq 'length' 2>&1) || {
+            echo "::warning::Could not list issues ($n); assuming none is open for this commit."
+            n=0
+          }
           if [ "${n:-0}" = "0" ]; then
             { cat .roll/playwright-cli-report.md; for f in .roll/conflicts/*.merged; do [ -f "$f" ] && { printf '\n### %s\n\n```\n' "$(basename "$f")"; head -300 "$f"; printf '```\n'; }; done; } > issue.md
-            gh issue create --title "upstream: playwright-cli $short conflicts with our test port" --body-file issue.md --label upstream-blocked
+            gh issue create --title "upstream: playwright-cli $short conflicts with our test port" --body-file issue.md --label upstream-blocked || {
+              echo "::error::The merge is blocked and the issue could not be opened (are issues enabled on this repository?). The report is in the job summary and the playwright-cli-report artifact."
+              exit 1
+            }
           fi
       - name: Apply, commit and push
         id: push
