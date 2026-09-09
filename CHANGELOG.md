@@ -4,7 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+- Upstream roll: a repository with issues disabled (a fork has them off by default) no longer fails the `detect` job. The blocked-issue lookup warns and continues, and a blocked roll that cannot open an issue says so with the report in the job summary and the artifact.
+- `npm pack` from a working tree no longer picks up the ignored `skills/patchright-cli-workspace/` evaluation runs: `files` names `skills/patchright-cli` instead of `skills`. Release tarballs, built from a clean checkout, are unchanged.
 
 ## [0.2.0] - 2026-09-05
 
