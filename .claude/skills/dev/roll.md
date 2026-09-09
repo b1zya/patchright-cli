@@ -27,7 +27,7 @@ Nothing is written when blocked: the merges with conflict markers go to `.roll/c
 2. `git checkout -b roll_<version>`.
 3. `npm run roll -- <version> --dry-run`, read `.roll/report.md`.
 4. `npm run roll -- <version>`.
-5. If blocked: open `.roll/conflicts/<file>.merged`, resolve the hunks into `src/<file>` (ours = `src`, base = `vendor`, the `upstream` side is the new code), then run step 4 again: a file that already contains the upstream change merges cleanly.
+5. If blocked: open `.roll/conflicts/<file>.merged`, resolve the hunks into `src/<file>` (ours = `src`, base = `vendor`, the `upstream` side is the new code), then run step 4 again. A file that adopted the upstream change merges cleanly; a hunk where our side stays (the product rename, our own `install`, the daemon environment) conflicts again no matter what, because the base only moves once the roll lands, so finish that roll with `npm run roll -- <version> --resolved`: the conflicted files are left exactly as you wrote them and the rest of the roll (vendor, pins, install, help, snapshot) proceeds. Everything else that blocks a roll -- no merge base, a missing `PWTEST_*` hook -- still stops it.
 6. New commands: decide on a guard in `src/stealth/guards.ts` and document them in `skills/patchright-cli/SKILL.md`; the help overlay test forces the decision. New daemon flags: `Session.daemonArgs` and the launch profile.
 7. What patchright itself changed between the two versions goes into the residual-leak list in `skills/patchright-cli/references/stealth.md` when a leak was closed or opened:
    ```bash

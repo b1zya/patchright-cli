@@ -121,7 +121,7 @@ jobs:
               head -300 "$f"
               printf '```\n'
             done
-            printf '\nResolve by hand: `npm run roll -- %s --dry-run` reproduces the merge; fix src/, then `npm run roll -- %s`.\n' "${{ needs.detect.outputs.target }}" "${{ needs.detect.outputs.target }}"
+            printf '\nResolve by hand: `npm run roll -- %s --dry-run` reproduces the merge; fix src/, then `npm run roll -- %s` (add `--resolved` for hunks where our side stays: they never merge cleanly on a rerun).\n' "${{ needs.detect.outputs.target }}" "${{ needs.detect.outputs.target }}"
           } > issue.md
           gh issue create --title "upstream: patchright-core ${{ needs.detect.outputs.target }} needs a manual port" --body-file issue.md --label upstream-blocked || {
             echo "::error::The roll is blocked and the issue could not be opened (are issues enabled on this repository?). The report is in the job summary and the roll-report artifact."
