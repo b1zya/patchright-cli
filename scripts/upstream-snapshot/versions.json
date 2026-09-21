@@ -17,9 +17,9 @@
   },
   "playwrightCli": {
     "repository": "microsoft/playwright-cli",
-    "commit": "655530f6d0dc71a0d6bf46ae165877d3c7311099",
-    "date": "2026-09-03T12:04:51-07:00",
-    "trackedAt": "2026-09-05",
+    "commit": "74354ecc7a43da16d91a9bc54fa8db8283a3fcf5",
+    "date": "2026-09-18T23:28:12Z",
+    "trackedAt": "2026-09-21",
     "vendorSha256": {
       "vendor/playwright-cli/tests/integration.spec.ts": "16e8a83a94ce268a916e17fca63b79c61375abf2fc870e15edcb251c824d6ed8"
     }
