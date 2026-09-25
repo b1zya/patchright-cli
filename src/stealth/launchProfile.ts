@@ -29,7 +29,8 @@ import { coreBundledVersionFinder, coreExecutableFinder, coreVersionForExecutabl
 import { localeForCountry, lookupGeo } from './geo';
 import { readIdentity, reconcileIdentity, writeIdentity } from './identity';
 import { contextProxy, launchProxy, parseProxy } from './proxy';
-import { detectBrowserMajor, majorOf, reducedUserAgent } from './userAgent';
+import { assumedScreen, detectHostScreen, screenInfoArg, workAreaWindowArg } from './screen';
+import { defaultVersionIo, detectBrowserMajor, majorOf, reducedUserAgent } from './userAgent';
 import { leak, note } from './warnings';
 
 import type { MinimistArgs } from '../args';
@@ -37,6 +38,7 @@ import type { DaemonConfig } from '../config/schema';
 import type { Warning } from '../output';
 import type { DaemonFlags, LaunchFacts, LaunchProfile, LaunchRequest } from './index';
 import type { ExecutableFinder } from './browsers';
+import type { ScreenGeometry } from './screen';
 import type { GeoInfo, GeoLookup } from './geo';
 import type { ParsedProxy } from './proxy';
 
@@ -52,6 +54,9 @@ export type LaunchDeps = {
   browserVersion: (channel: string, executablePath: string) => string | undefined;
   // Whether a file exists; injected so a configured executablePath can be tested without one.
   exists: (file: string) => boolean;
+  // The host's primary monitor, measured without a window (screen.ts); asked only when there
+  // is a display, undefined when it cannot be read.
+  hostScreen: () => ScreenGeometry | undefined;
 };
 
 export const webrtcPolicyArg = '--force-webrtc-ip-handling-policy=disable_non_proxied_udp';
@@ -232,16 +237,38 @@ export function createLaunchProfileResolver(deps: LaunchDeps) {
     }
 
     const chromiumArgs: string[] = [...(launchOptions.args ?? [])];
+    const extraArgs = flagList(args, 'extra-arg');
     const windowSize = flagString(args, 'window-size');
+    const ownWindow = !!windowSize || chromiumArgs.some(arg => arg.startsWith('--window-size') || arg === '--start-maximized');
     if (windowSize) {
       const match = windowSize.match(/^(\d+)[x,](\d+)$/);
       if (!match)
         throw new Error(`--window-size expects WxH, got '${windowSize}'`);
       chromiumArgs.push(`--window-size=${match[1]},${match[2]}`);
-    } else if (!headless && !chromiumArgs.some(arg => arg.startsWith('--window-size') || arg === '--start-maximized')) {
+    } else if (!headless && !ownWindow) {
       chromiumArgs.push('--start-maximized');
     }
-    const extraArgs = flagList(args, 'extra-arg');
+    // Headless has no display and says 800x600, screen == available screen, whatever the machine:
+    // present the host's monitor instead (screen.ts), or a common desktop when there is none,
+    // with a window over its work area. A screen or window the user set, and device emulation,
+    // which brings its own, are left alone.
+    let screen: ScreenGeometry | undefined;
+    const ownScreen = [...chromiumArgs, ...extraArgs].some(arg => arg.startsWith('--screen-info'));
+    if (headless && !flags.mobile && !device && !ownScreen) {
+      screen = (display.available ? deps.hostScreen() : undefined) ?? assumedScreen(deps.platform);
+      chromiumArgs.push(screenInfoArg(screen));
+      if (!ownWindow)
+        chromiumArgs.push(workAreaWindowArg(screen));
+      if (screen.source === 'assumed')
+        warnings.push(note('headless-screen', `${screen.width}x${screen.height}`));
+    }
+    // Playwright hides the scrollbars of a headless browser: a 0 px scrollbar where Chrome on
+    // every desktop draws one (15 px on Windows 11) is a one-line check. Keep Chrome's own.
+    if (headless && launchOptions.ignoreDefaultArgs !== true) {
+      const ignored: string[] = Array.isArray(launchOptions.ignoreDefaultArgs) ? launchOptions.ignoreDefaultArgs : [];
+      if (!ignored.includes('--hide-scrollbars'))
+        launchOptions.ignoreDefaultArgs = [...ignored, '--hide-scrollbars'];
+    }
     if (extraArgs.length) {
       chromiumArgs.push(...extraArgs);
       warnings.push(leak('extra-arg', extraArgs.join(' ')));
@@ -338,6 +365,8 @@ export function createLaunchProfileResolver(deps: LaunchDeps) {
       userAgent: typeof contextOptions.userAgent === 'string' ? contextOptions.userAgent : undefined,
       userAgentSource,
     };
+    if (screen)
+      launch.screen = { width: screen.width, height: screen.height, devicePixelRatio: screen.devicePixelRatio, source: screen.source };
     return { daemonConfig: config, daemonFlags: flags, env: Object.keys(env).length ? env : undefined, warnings, launch };
   };
 }
@@ -371,4 +400,5 @@ export const resolveLaunchProfile = createLaunchProfileResolver({
   // download), then the file itself.
   browserVersion: (channel, executablePath) => majorOf(channel === customChannel ? coreVersionForExecutable(executablePath) : coreBundledVersionFinder()(channel)) ?? detectBrowserMajor(executablePath, process.platform),
   exists: file => fs.existsSync(file),
+  hostScreen: () => detectHostScreen(process.platform, defaultVersionIo),
 });

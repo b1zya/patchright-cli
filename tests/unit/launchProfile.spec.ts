@@ -29,8 +29,12 @@ import type { MinimistArgs } from '../../src/args';
 const allInstalled = (name: string) => ({ chrome: '/chrome', msedge: '/msedge', chromium: '/chromium' } as Record<string, string>)[name];
 const geo = { ip: '1.2.3.4', countryCode: 'DE', timezone: 'Europe/Berlin', latitude: 52.5, longitude: 13.4, lookedUpAt: 'now', source: 'test' };
 
+// The host monitor a headless launch mirrors: 1920x1080 with a 40 px panel at the bottom.
+const hostScreen = { width: 1920, height: 1080, insets: { left: 0, top: 0, right: 0, bottom: 40 }, devicePixelRatio: 1, source: 'host' as const };
+const hostScreenArgs = ['--screen-info={0,0 1920x1080 workAreaBottom=40}', '--window-size=1920,1040'];
+
 function deps(overrides: Partial<LaunchDeps> = {}): LaunchDeps {
-  return { find: allInstalled, lookupGeo: async () => geo, platform: 'linux', writeProfileFiles: false, display: () => ({ available: true, humanVisible: true, detail: 'test display' }), browserVersion: () => '152', exists: () => true, ...overrides };
+  return { find: allInstalled, lookupGeo: async () => geo, platform: 'linux', writeProfileFiles: false, display: () => ({ available: true, humanVisible: true, detail: 'test display' }), browserVersion: () => '152', exists: () => true, hostScreen: () => hostScreen, ...overrides };
 }
 const noDisplay = { display: () => ({ available: false, humanVisible: false, detail: 'no DISPLAY or WAYLAND_DISPLAY' }) };
 
@@ -60,7 +64,7 @@ test('a configured executablePath replaces the channel search: works with no cha
   const userConfig = () => ({ browser: { launchOptions: { executablePath: portable } } });
   // No Chrome, no Edge, no bundle: still launches, without a channel, from that file.
   const profile = await createLaunchProfileResolver(deps({ find: none, browserVersion: (channel, exe) => (channel === 'custom' && exe === portable) ? '150' : undefined }))(request({ _: ['open'] }, { userConfig: userConfig() }));
-  expect(profile.daemonConfig.browser!.launchOptions).toEqual({ executablePath: portable, headless: true, args: [] });
+  expect(profile.daemonConfig.browser!.launchOptions).toEqual({ executablePath: portable, headless: true, args: hostScreenArgs, ignoreDefaultArgs: ['--hide-scrollbars'] });
   expect(profile.daemonConfig.browser!.contextOptions!.userAgent).toContain('Chrome/150.0.0.0');
   expect(keys(profile)).toEqual(['custom-executable', 'headless-user-agent']);
   // An Edge build at a custom path keeps Edge's suffix; an unreadable version is reported, not guessed.
@@ -76,7 +80,7 @@ test('a configured executablePath replaces the channel search: works with no cha
 test('the launch facts: once on the open line, in full in JSON, the path only for a non-standard browser', async () => {
   const resolve = createLaunchProfileResolver(deps());
   const plain = (await resolve(request({ _: ['open'] }))).launch!;
-  expect(plain).toEqual({ channel: 'chrome', executablePath: '/chrome', version: '152', headless: true, profileDir: path.join('/root/daemon/h', 'ud-default-chrome'), userAgent: chromeUa, userAgentSource: 'headless' });
+  expect(plain).toEqual({ channel: 'chrome', executablePath: '/chrome', version: '152', headless: true, profileDir: path.join('/root/daemon/h', 'ud-default-chrome'), userAgent: chromeUa, userAgentSource: 'headless', screen: { width: 1920, height: 1080, devicePixelRatio: 1, source: 'host' } });
   expect(describeLaunch(plain)).toBe('chrome 152, headless, profile ud-default-chrome, user agent Chrome/152 (headed name of this build)');
   // Headed: the browser's own user agent, nothing to add. Isolated: no profile directory.
   expect(describeLaunch((await resolve(request({ _: ['open'], headed: true }))).launch!)).toBe('chrome 152, headed, profile ud-default-chrome');
@@ -114,8 +118,9 @@ test('default open is headless, persistent, real Chrome, real OS preferences (le
   const browser = profile.daemonConfig.browser!;
   expect(browser.browserName).toBe('chromium');
   expect(browser.isolated).toBe(false);
-  // Headless by default, so no visible window and no --start-maximized.
-  expect(browser.launchOptions).toEqual({ channel: 'chrome', headless: true, args: [] });
+  // Headless by default, so no visible window and no --start-maximized; the screen is the host
+  // monitor's with a window over its work area, and Chrome keeps its scrollbars.
+  expect(browser.launchOptions).toEqual({ channel: 'chrome', headless: true, args: hostScreenArgs, ignoreDefaultArgs: ['--hide-scrollbars'] });
   expect(browser.contextOptions).toEqual({ viewport: null, colorScheme: 'no-override', reducedMotion: 'no-override', forcedColors: 'no-override', contrast: 'no-override', userAgent: chromeUa });
   expect(profile.daemonConfig.outputDir).toBe(path.join('/ws', '.patchright-cli'));
 });
@@ -145,9 +150,32 @@ test('--headed with no display is a clear, platform-specific error, never a sile
 });
 
 test('no display: an unspecified open falls back to headless and runs (does not error)', async () => {
-  const profile = await createLaunchProfileResolver(deps(noDisplay))(request({ _: ['open'] }));
+  // The host monitor is not even asked for: a common desktop stands in, and the launch says so.
+  const profile = await createLaunchProfileResolver(deps({ ...noDisplay, hostScreen: () => { throw new Error('asked without a display'); } }))(request({ _: ['open'] }));
   expect(profile.daemonConfig.browser!.launchOptions!.headless).toBe(true);
-  expect(profile.warnings).toEqual([headlessNote]);
+  expect(profile.daemonConfig.browser!.launchOptions!.args).toEqual(['--screen-info={0,0 1920x1080 workAreaTop=32}', '--window-size=1920,1048']);
+  expect(profile.warnings).toEqual([headlessNote, { key: 'headless-screen', kind: 'notice', severity: 'INFO', message: expect.stringContaining('(1920x1080)') }]);
+});
+
+test('headless presents the host screen and keeps its scrollbars; what the user set, device emulation and headed are left alone', async () => {
+  const resolve = createLaunchProfileResolver(deps());
+  const launch = async (args: Partial<MinimistArgs>, userConfig = {}) => (await resolve(request({ _: ['open'], ...args }, { userConfig }))).daemonConfig.browser!.launchOptions!;
+  // Headed has a real screen and real scrollbars: nothing to add.
+  expect(await launch({ headed: true })).toEqual({ channel: 'chrome', headless: false, args: ['--start-maximized', '--test-type='] });
+  // Device emulation brings a screen of its own.
+  expect((await launch({ mobile: true })).args).toEqual([]);
+  expect((await launch({ device: 'iPhone 15' })).args).toEqual([]);
+  // A screen of the user's own, from --extra-arg or the config, wins; so does a window size in the config.
+  expect((await launch({ 'extra-arg': '--screen-info={0,0 1366x768}' })).args).toEqual(['--screen-info={0,0 1366x768}']);
+  expect((await launch({}, { browser: { launchOptions: { args: ['--window-size=800,600'] } } })).args).toEqual(['--window-size=800,600', '--screen-info={0,0 1920x1080 workAreaBottom=40}']);
+  // The user's own ignored defaults are kept, and ignoring all of them stays that.
+  expect((await launch({}, { browser: { launchOptions: { ignoreDefaultArgs: ['--mute-audio'] } } })).ignoreDefaultArgs).toEqual(['--mute-audio', '--hide-scrollbars']);
+  expect((await launch({}, { browser: { launchOptions: { ignoreDefaultArgs: true } } })).ignoreDefaultArgs).toBe(true);
+  // An unreadable monitor on a machine with a display: the common desktop, and the note.
+  const unreadable = await createLaunchProfileResolver(deps({ hostScreen: () => undefined, platform: 'win32' }))(request({ _: ['open'] }));
+  expect(unreadable.daemonConfig.browser!.launchOptions!.args).toEqual(['--screen-info={0,0 1920x1080 workAreaBottom=48}', '--window-size=1920,1032']);
+  expect(keys(unreadable)).toEqual(['headless-user-agent', 'headless-screen']);
+  expect(unreadable.launch!.screen).toEqual({ width: 1920, height: 1080, devicePixelRatio: 1, source: 'assumed' });
 });
 
 test('headless presents the headed user agent of the same build; headed, a user user agent, an opt-out or an unknown version do not', async () => {
@@ -204,7 +232,7 @@ test('deviations are allowed but warned about', async () => {
   const resolve = createLaunchProfileResolver(deps());
   const headless = await resolve(request({ _: ['open'], headless: true }));
   expect(headless.daemonConfig.browser!.launchOptions!.headless).toBe(true);
-  expect(headless.daemonConfig.browser!.launchOptions!.args).toEqual([]);
+  expect(headless.daemonConfig.browser!.launchOptions!.args).toEqual(hostScreenArgs);
   // Ordinary headless is quiet: no leak warning unless the task is anti-detection-sensitive (a
   // proxy); the only line is the note about the user agent it presents.
   expect(keys(headless)).toEqual(['headless-user-agent']);
@@ -216,7 +244,8 @@ test('deviations are allowed but warned about', async () => {
 
   const chromium = await resolve(request({ _: ['open'], browser: 'chromium', 'window-size': '1200x800', 'extra-arg': '--foo' }));
   expect(keys(chromium)).toEqual(['bundled-chromium', 'headless-user-agent', 'extra-arg']);
-  expect(chromium.daemonConfig.browser!.launchOptions!.args).toEqual(['--window-size=1200,800', '--foo']);
+  // A window size of the user's own is kept; the screen around it is still the host's.
+  expect(chromium.daemonConfig.browser!.launchOptions!.args).toEqual(['--window-size=1200,800', '--screen-info={0,0 1920x1080 workAreaBottom=40}', '--foo']);
   expect(chromium.warnings[0].unsilenceable).toBe(true);
 
   const ua = await resolve(request({ _: ['open'] }, { userConfig: { browser: { contextOptions: { userAgent: 'X', viewport: { width: 1, height: 1 } } } } }));

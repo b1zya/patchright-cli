@@ -79,8 +79,10 @@ test('--config points at a project config file and a malformed global config onl
 
   const opened = await runCli(['open', 'data:text/html,hello', '--config=my.json', '--json'], env);
   expect(opened.exitCode).toBe(0);
-  // The malformed global config is a note; the headless user-agent note is the launch's own.
-  expect(parseJson(opened).warnings).toEqual([expect.objectContaining({ key: 'config', kind: 'notice' }), expect.objectContaining({ key: 'headless-user-agent', kind: 'notice' })]);
+  // The malformed global config is a note; the headless user-agent note is the launch's own, and
+  // so is the screen note on a machine with no display to measure (a CI runner without xvfb).
+  const screenNote = parseJson(opened).launch.screen.source === 'assumed' ? [expect.objectContaining({ key: 'headless-screen', kind: 'notice' })] : [];
+  expect(parseJson(opened).warnings).toEqual([expect.objectContaining({ key: 'config', kind: 'notice' }), expect.objectContaining({ key: 'headless-user-agent', kind: 'notice' }), ...screenNote]);
   expect((await resolvedConfig(env)).timeouts.action).toBe(555);
   expect(await runCli(['close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
 });
