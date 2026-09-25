@@ -137,7 +137,8 @@ test('opting out is allowed but warned about', async ({}) => {
   // Opting out keeps Chrome's own headless name.
   const raw = await runCli(['open', 'data:text/html,raw', '--headless', '--no-headless-user-agent', '--isolated', '--json']);
   expect(raw.exitCode, raw.error).toBe(0);
-  expect(parseJson(raw).warnings).toBeUndefined();
+  // Nothing to say about the user agent; the screen note only where no display can be measured.
+  expect((parseJson(raw).warnings ?? []).filter((w: any) => w.key !== 'headless-screen')).toEqual([]);
   expect(await mainWorld('navigator.userAgent')).toContain('HeadlessChrome/');
   expect(await runCli(['close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
 
