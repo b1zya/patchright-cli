@@ -218,7 +218,7 @@ test('a session closes when the process that owns it exits, and an explicit clos
 test('inside an agent harness the 30 minute idle default applies and is announced; a flag turns it off', async ({}) => {
   const agent = { CLAUDECODE: '1' };
   const opened = parseJson(await runCli(['-s=agent', 'open', 'data:text/html,<title>agent</title>', '--json'], agent));
-  expect(opened.warnings.filter((w: any) => w.key !== 'headless-user-agent')).toEqual([expect.objectContaining({ key: 'lifetime', kind: 'notice', message: expect.stringMatching(/^closes after 30m idle(?: or when process \d+ \(\w+\) exits)?; --idle-timeout=0 and --no-owner-pid keep it open$/) })]);
+  expect(opened.warnings.filter((w: any) => w.key !== 'headless-user-agent' && w.key !== 'headless-screen')).toEqual([expect.objectContaining({ key: 'lifetime', kind: 'notice', message: expect.stringMatching(/^closes after 30m idle(?: or when process \d+ \(\w+\) exits)?; --idle-timeout=0 and --no-owner-pid keep it open$/) })]);
   // The launch facts travel with the JSON result and open the text output, once.
   expect(opened.launch).toEqual(expect.objectContaining({ channel: expect.any(String), executablePath: expect.any(String), headless: true, profileDir: expect.stringContaining('ud-agent-') }));
   const textOpen = await runCli(['-s=agent', 'open', 'data:text/html,<title>text</title>'], agent);
