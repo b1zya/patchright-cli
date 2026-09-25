@@ -105,13 +105,21 @@ test('opting out is allowed but warned about', async ({}) => {
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const headless = await runCli(['open', `http://127.0.0.1:${(server.address() as any).port}/`, '--headless', '--isolated', '--json']);
   expect(headless.exitCode, headless.error).toBe(0);
-  expect(parseJson(headless).warnings).toEqual([expect.objectContaining({ key: 'headless-user-agent', kind: 'notice' })]);
+  // The screen is the host monitor's; on a machine where it cannot be read, a common desktop and a note.
+  const facts = parseJson(headless).launch;
+  const screenNote = facts.screen.source === 'assumed' ? [expect.objectContaining({ key: 'headless-screen', kind: 'notice' })] : [];
+  expect(parseJson(headless).warnings).toEqual([expect.objectContaining({ key: 'headless-user-agent', kind: 'notice' }), ...screenNote]);
   expect((await resolvedConfig()).browser.launchOptions.headless).toBe(true);
   const presented = await mainWorld(`async () => {
     const worker = new Worker(URL.createObjectURL(new Blob(['postMessage(navigator.userAgent)'])));
     const workerUa = await new Promise(resolve => { worker.onmessage = e => resolve(e.data); });
     const hints = await navigator.userAgentData.getHighEntropyValues(['fullVersionList', 'uaFullVersion']);
-    return { ua: navigator.userAgent, workerUa, brands: navigator.userAgentData.brands.map(b => b.brand), full: hints.uaFullVersion, list: hints.fullVersionList.length };
+    const probe = document.createElement('div');
+    probe.style.cssText = 'width:100px;height:100px;overflow:scroll;position:absolute';
+    document.body.appendChild(probe);
+    const scrollbar = probe.offsetWidth - probe.clientWidth;
+    probe.remove();
+    return { ua: navigator.userAgent, workerUa, brands: navigator.userAgentData.brands.map(b => b.brand), full: hints.uaFullVersion, list: hints.fullVersionList.length, screen: [screen.width, screen.height], scrollbar };
   }`);
   expect(presented.ua).toMatch(/ Chrome\/\d+\.0\.0\.0 Safari\/537\.36$/);
   expect(presented.ua).not.toContain('Headless');
@@ -119,6 +127,11 @@ test('opting out is allowed but warned about', async ({}) => {
   expect(presented.brands.join()).not.toContain('Headless');
   expect(presented.full.split('.')[0]).toBe(presented.ua.match(/Chrome\/(\d+)/)![1]);
   expect(presented.list).toBeGreaterThan(0);
+  // Not Chrome's headless 800x600: the screen the launch announced, and scrollbars that take space.
+  expect(presented.screen).toEqual([facts.screen.width, facts.screen.height]);
+  expect(presented.screen).not.toEqual([800, 600]);
+  if (process.platform !== 'darwin') // macOS draws overlay scrollbars unless the user asks otherwise
+    expect(presented.scrollbar).toBeGreaterThan(0);
   expect(await runCli(['close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
   server.close();
   // Opting out keeps Chrome's own headless name.

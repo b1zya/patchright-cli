@@ -74,6 +74,8 @@ export type LaunchFacts = {
   profileDir?: string;
   userAgent?: string;
   userAgentSource?: 'headless' | 'config';
+  // Headless only: the screen presented instead of Chrome's 800x600 (screen.ts).
+  screen?: { width: number, height: number, devicePixelRatio: number, source: 'host' | 'assumed' };
 };
 
 export type LaunchProfile = {

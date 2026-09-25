@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Stealth
+- Headless sessions no longer present Chrome's headless screen of 800x600 with no taskbar. With a display, the screen is the host's primary monitor (size, work area, scale), measured without a window, and the window fills its work area, so the screen, the available screen and the outer window match a maximized headed window of the same machine. Without a display (a server, an SSH or service session) a common desktop of the platform stands in, with a `headless-screen` note. `--window-size`, `--screen-info` through `--extra-arg`, `--device` and `--mobile` keep their own values.
+- Headless sessions keep Chrome's scrollbars: Playwright's `--hide-scrollbars` made them 0 px wide where Chrome on Windows draws 15.
+
 ### Added
 - `recording-start` / `recording-stop` (new upstream commands): record what you do in the window and print it back as code. They carry the new `recorder-injection` warning, because the recorder puts a `__pw_recorder` binding on the page main world and an overlay element on every page until it is stopped.
 - `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.

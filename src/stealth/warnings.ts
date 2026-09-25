@@ -27,6 +27,7 @@ export type LeakKey =
   | 'headless'
   | 'headless-user-agent'
   | 'headless-user-agent-unknown'
+  | 'headless-screen'
   | 'custom-executable'
   | 'device-emulation'
   | 'user-agent'
@@ -73,6 +74,10 @@ export const catalog: Record<LeakKey, CatalogEntry> = {
   'headless-user-agent': {
     severity: 'INFO',
     message: 'The user agent is the headed name of this build, not HeadlessChrome; --no-headless-user-agent keeps the raw one.',
+  },
+  'headless-screen': {
+    severity: 'INFO',
+    message: 'No display to measure here, so headless presents a common desktop of this platform instead of the fixed 800x600 every detector knows; --window-size, or --screen-info through --extra-arg, sets another.',
   },
   'headless-user-agent-unknown': {
     severity: 'MEDIUM',
