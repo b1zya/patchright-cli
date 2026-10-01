@@ -5,18 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  # Reusable: the upstream workflows run the same matrix on a roll branch before opening
-  # its pull request (a PR created by the workflow token does not trigger CI on its own).
-  workflow_call:
-    inputs:
-      ref:
-        description: 'git ref to test (default: the caller ref)'
-        required: false
-        type: string
-        default: ''
+  # The upstream workflows dispatch this on the branch they pushed (.github/actions/ci-on-branch):
+  # a PR opened with the workflow token starts no CI, and the `main` ruleset requires these job
+  # names on the PR head. Keep its required checks in step with the matrix below.
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}-${{ inputs.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,8 +30,6 @@ jobs:
             node: 22
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.ref || github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
