@@ -1,0 +1,56 @@
+name: CI on a pushed branch
+description: >
+  Dispatch ci.yml on a branch this workflow pushed and wait for the run. A pull request opened
+  with the workflow token starts no CI, and a reusable ci.yml call attaches its check runs to the
+  caller's commit under `test / ...`; a workflow_dispatch run (the one event the workflow token
+  may start) puts them on the branch head under the names the `main` ruleset requires.
+
+inputs:
+  branch:
+    description: 'The branch to test; its head must be checked out'
+    required: true
+
+outputs:
+  result:
+    description: 'Conclusion of the CI run (success, failure, cancelled, ...; missing if it never started)'
+    value: ${{ steps.ci.outputs.result }}
+  url:
+    description: 'Link to the CI run'
+    value: ${{ steps.ci.outputs.url }}
+
+runs:
+  using: composite
+  steps:
+    - id: ci
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ inputs.branch }}
+      run: |
+        sha=$(git rev-parse HEAD)
+        gh workflow run ci.yml --ref "$BRANCH"
+        # The dispatch returns no run id: find the run by its commit (every push here is a new one).
+        id=
+        for _ in $(seq 1 24); do
+          sleep 5
+          id=$(gh run list --workflow ci.yml --event workflow_dispatch --commit "$sha" --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          [ -n "$id" ] && break
+        done
+        if [ -z "$id" ]; then
+          echo "::error::The CI run dispatched on $BRANCH ($sha) did not show up within two minutes."
+          echo "result=missing" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        url=$(gh run view "$id" --json url --jq .url)
+        echo "url=$url" >> "$GITHUB_OUTPUT"
+        echo "Waiting for CI on $BRANCH: $url"
+        # Not `gh run watch`: it also reads check annotations, which needs a permission the
+        # calling workflows do not grant. The job's timeout bounds the wait.
+        while :; do
+          state=$(gh run view "$id" --json status,conclusion --jq '.status + " " + .conclusion') || state=
+          case "$state" in completed\ *) break ;; esac
+          sleep 30
+        done
+        result=${state#completed }
+        echo "CI on $BRANCH: $result"
+        echo "result=${result:-missing}" >> "$GITHUB_OUTPUT"

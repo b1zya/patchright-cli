@@ -6,6 +6,8 @@ name: Upstream watch (microsoft/playwright-cli)
 #   safe    only files this fork does not use changed -> bookkeeping PR, merged when CI is green
 #   review  a mapped file merged cleanly, or a rewritten file changed upstream -> PR waits
 #   blocked merge conflict -> issue with the report; nothing written
+# CI runs on the pushed branch itself (.github/actions/ci-on-branch), so its checks sit on the
+# PR head where the `main` ruleset looks for them.
 
 on:
   schedule:
@@ -18,6 +20,7 @@ on:
         default: false
 
 permissions:
+  actions: write  # dispatch ci.yml on the tracking branch
   contents: write
   pull-requests: write
   issues: write
@@ -101,22 +104,15 @@ jobs:
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 
-  test:
+  pull-request:
     needs: track
     if: needs.track.outputs.pushed == 'true'
-    uses: ./.github/workflows/ci.yml
-    with:
-      ref: ${{ needs.track.outputs.branch }}
-
-  pull-request:
-    needs: [track, test]
-    if: always() && needs.track.outputs.pushed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
       BRANCH: ${{ needs.track.outputs.branch }}
       CLASSIFICATION: ${{ needs.track.outputs.classification }}
-      CI_RESULT: ${{ needs.test.result }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -125,8 +121,16 @@ jobs:
         with:
           name: playwright-cli-report
           path: .roll
+      - name: Run CI on the tracking branch
+        id: ci
+        uses: ./.github/actions/ci-on-branch
+        with:
+          branch: ${{ needs.track.outputs.branch }}
       - name: Create or update the pull request
         id: pr
+        env:
+          CI_RESULT: ${{ steps.ci.outputs.result }}
+          CI_URL: ${{ steps.ci.outputs.url }}
         run: |
           for label in upstream upstream-playwright-cli auto-merge needs-review tests-failed; do gh label create "$label" 2>/dev/null || true; done
           labels="upstream,upstream-playwright-cli"
@@ -135,7 +139,8 @@ jobs:
             review) labels="$labels,needs-review" ;;
           esac
           [ "$CI_RESULT" = "success" ] || labels="$labels,tests-failed"
-          { cat .roll/playwright-cli-report.md; printf '\nCI on this branch: **%s**\n' "$CI_RESULT"; } > body.md
+          ci="**$CI_RESULT**"; [ -n "$CI_URL" ] && ci="$ci ([run]($CI_URL))"
+          { cat .roll/playwright-cli-report.md; printf '\nCI on this branch: %s\n' "$ci"; } > body.md
           number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
           if [ -z "$number" ]; then
             gh pr create --base main --head "$BRANCH" --title "chore: track microsoft/playwright-cli" --body-file body.md --label "$labels"
@@ -145,7 +150,12 @@ jobs:
           fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
       - name: Merge automatically (nothing we use changed, green CI)
-        if: env.CLASSIFICATION == 'safe' && env.CI_RESULT == 'success'
+        if: env.CLASSIFICATION == 'safe' && steps.ci.outputs.result == 'success'
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch \
-            || gh pr comment "${{ steps.pr.outputs.number }}" --body "Safe and green, but the workflow could not merge (branch protection or repository settings). Merge by hand."
+            || gh pr comment "${{ steps.pr.outputs.number }}" --body "Safe and green, but the workflow could not merge (the \`main\` ruleset or repository settings). Merge by hand."
+      - name: Fail the run when CI did not pass
+        if: steps.ci.outputs.result != 'success'
+        run: |
+          echo "::error::CI on $BRANCH: ${{ steps.ci.outputs.result }}. The pull request is open with the tests-failed label."
+          exit 1

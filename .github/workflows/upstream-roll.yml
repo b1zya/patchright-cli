@@ -1,8 +1,9 @@
 name: Upstream roll (patchright-core)
 
 # Daily: when a newer patchright-core is on npm and at least 48 h old (its patcher breaks for
-# a few days after a Playwright release), roll it on a branch, run the full CI matrix on that
-# branch and open a pull request carrying the roll report (scripts/roll.ts):
+# a few days after a Playwright release), roll it on a branch, run ci.yml on that branch (its
+# checks land on the branch head, where the `main` ruleset looks for them) and open a pull
+# request carrying the roll report (scripts/roll.ts):
 #   safe    nothing our client is forked from changed  -> merged automatically when CI is green
 #   review  upstream changes merged cleanly, but the client, daemon flags or skill moved
 #           -> the PR waits for a human (labels: upstream, needs-review)
@@ -30,6 +31,7 @@ on:
         default: false
 
 permissions:
+  actions: write  # dispatch ci.yml on the roll branch
   contents: write
   pull-requests: write
   issues: write
@@ -144,23 +146,16 @@ jobs:
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 
-  test:
+  pull-request:
     needs: [detect, roll]
     if: needs.roll.outputs.pushed == 'true'
-    uses: ./.github/workflows/ci.yml
-    with:
-      ref: ${{ needs.roll.outputs.branch }}
-
-  pull-request:
-    needs: [detect, roll, test]
-    if: always() && needs.roll.outputs.pushed == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       GH_TOKEN: ${{ github.token }}
       BRANCH: ${{ needs.roll.outputs.branch }}
       TARGET: ${{ needs.detect.outputs.target }}
       CLASSIFICATION: ${{ needs.roll.outputs.classification }}
-      CI_RESULT: ${{ needs.test.result }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -169,8 +164,16 @@ jobs:
         with:
           name: roll-report
           path: .roll
+      - name: Run CI on the roll branch
+        id: ci
+        uses: ./.github/actions/ci-on-branch
+        with:
+          branch: ${{ needs.roll.outputs.branch }}
       - name: Create or update the pull request
         id: pr
+        env:
+          CI_RESULT: ${{ steps.ci.outputs.result }}
+          CI_URL: ${{ steps.ci.outputs.url }}
         run: |
           for label in upstream auto-merge needs-review tests-failed; do gh label create "$label" 2>/dev/null || true; done
           labels="upstream"
@@ -179,7 +182,8 @@ jobs:
             review) labels="$labels,needs-review" ;;
           esac
           [ "$CI_RESULT" = "success" ] || labels="$labels,tests-failed"
-          { cat .roll/report.md; printf '\nCI on this branch: **%s**\n' "$CI_RESULT"; } > body.md
+          ci="**$CI_RESULT**"; [ -n "$CI_URL" ] && ci="$ci ([run]($CI_URL))"
+          { cat .roll/report.md; printf '\nCI on this branch: %s\n' "$ci"; } > body.md
           number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
           if [ -z "$number" ]; then
             gh pr create --base main --head "$BRANCH" --title "chore: roll patchright-core to $TARGET" --body-file body.md --label "$labels"
@@ -189,15 +193,23 @@ jobs:
           fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
       - name: Merge automatically (safe roll, green CI)
-        if: env.CLASSIFICATION == 'safe' && env.CI_RESULT == 'success'
+        if: env.CLASSIFICATION == 'safe' && steps.ci.outputs.result == 'success'
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch \
-            || gh pr comment "${{ steps.pr.outputs.number }}" --body "The roll is safe and CI is green, but the workflow could not merge (branch protection or repository settings). Merge by hand."
+            || gh pr comment "${{ steps.pr.outputs.number }}" --body "The roll is safe and CI is green, but the workflow could not merge (the \`main\` ruleset or repository settings). Merge by hand."
       - name: Explain why the pull request stays open
-        if: env.CLASSIFICATION != 'safe' || env.CI_RESULT != 'success'
+        if: env.CLASSIFICATION != 'safe' || steps.ci.outputs.result != 'success'
+        env:
+          CI_RESULT: ${{ steps.ci.outputs.result }}
+          CI_URL: ${{ steps.ci.outputs.url }}
         run: |
           if [ "$CI_RESULT" != "success" ]; then
-            gh pr comment "${{ steps.pr.outputs.number }}" --body "CI result on this branch: $CI_RESULT. Not merged; see the workflow run for the failing job."
+            gh pr comment "${{ steps.pr.outputs.number }}" --body "CI result on this branch: $CI_RESULT. Not merged; see ${CI_URL:-the workflow run} for the failing job."
           else
             gh pr comment "${{ steps.pr.outputs.number }}" --body "Upstream changes merged cleanly but the client surface moved (see the report); a human review is required before merging."
           fi
+      - name: Fail the run when CI did not pass
+        if: steps.ci.outputs.result != 'success'
+        run: |
+          echo "::error::CI on $BRANCH: ${{ steps.ci.outputs.result }}. The pull request is open with the tests-failed label."
+          exit 1

@@ -41,10 +41,11 @@ Nothing is written when blocked: the merges with conflict markers go to `.roll/c
 
 ## Automation
 
-- `.github/workflows/upstream-roll.yml` runs daily: detects a newer, old-enough `patchright-core`, rolls it on `roll_<version>`, runs the full CI matrix on that branch (the reusable `ci.yml`), and opens the PR with the report. `safe` + green CI is merged automatically; `review` waits for a human (label `needs-review`); `blocked` opens an issue (label `upstream-blocked`) with the report and the conflicted merges and writes nothing; scheduled runs skip that version while the issue is open. Manual runs take a version, `dry_run` (report only) and `force`.
+- `.github/workflows/upstream-roll.yml` runs daily: detects a newer, old-enough `patchright-core`, rolls it on `roll_<version>`, runs `ci.yml` on that branch and waits for it (`.github/actions/ci-on-branch`), and opens the PR with the report. `safe` + green CI is merged automatically; `review` waits for a human (label `needs-review`); `blocked` opens an issue (label `upstream-blocked`) with the report and the conflicted merges and writes nothing; scheduled runs skip that version while the issue is open. Manual runs take a version, `dry_run` (report only) and `force`.
 - `.github/workflows/upstream-playwright-cli.yml` runs weekly with the same verdicts for `microsoft/playwright-cli` (`npm run watch:playwright-cli`, `--apply` to take a clean merge).
 - Both workflows need Issues enabled on the repository (a fork has them off by default) for the `blocked` verdict to land anywhere; without them the lookup only warns, but a blocked roll fails the job with the report in the summary and the artifact.
-- The automatic merge uses the workflow token: keep the repository setting "Allow GitHub Actions to create and approve pull requests" on, and do not require reviews from branch protection for `roll_*` branches, or the merge step only leaves a comment and the PR waits.
+- The automatic merge uses the workflow token: keep the repository setting "Allow GitHub Actions to create and approve pull requests" on, and do not require reviews in the `main` ruleset, or the merge step only leaves a comment and the PR waits.
+- The `main` ruleset requires the CI job names (`<os> / node <n>`) on the PR head. A PR opened with the workflow token starts no CI, and a reusable `ci.yml` call would put its checks on the caller's commit under `test / ...`, so the workflows dispatch `ci.yml` on the branch instead: `workflow_dispatch` is the one event the workflow token may start, and its checks land on the branch head under the plain names. Change the ruleset's required checks together with the matrix in `ci.yml`, or every PR stays blocked.
 
 ## Start of a session
 
