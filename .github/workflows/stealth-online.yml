@@ -22,4 +22,5 @@ jobs:
         with:
           name: selftest-online-screenshots
           path: .patchright-cli/
+          include-hidden-files: true
           if-no-files-found: warn

@@ -102,11 +102,14 @@ jobs:
           echo "classification=$(node -p "require('./.roll/result.json').classification")" >> "$GITHUB_OUTPUT"
           cat .roll/report.md >> "$GITHUB_STEP_SUMMARY"
           if [ "$code" != "0" ] && [ "$code" != "2" ]; then exit "$code"; fi
+      # .roll/ is a dot directory: upload-artifact skips hidden files unless told otherwise, and
+      # the pull-request job cannot open a PR without this report, so a missing one fails here.
       - uses: actions/upload-artifact@v4
         with:
           name: roll-report
           path: .roll/
-          if-no-files-found: ignore
+          include-hidden-files: true
+          if-no-files-found: error
       - name: Open an issue for a blocked roll
         if: steps.roll.outputs.classification == 'blocked'
         env:
