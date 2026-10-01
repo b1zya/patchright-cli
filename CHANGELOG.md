@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - `recording-start` / `recording-stop` (new upstream commands): record what you do in the window and print it back as code. They carry the new `recorder-injection` warning, because the recorder puts a `__pw_recorder` binding on the page main world and an overlay element on every page until it is stopped.
 - `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.
 
+### Changed
+- Node.js 22 or newer is required: Node 20 reached end of life in April 2026. CI tests the two supported LTS lines, 22 and 24, and the workflows use the action releases that run on Node 24 (`checkout`, `setup-node` and `upload-artifact` v7, `download-artifact` v8).
+
 ### Fixed
 - Windows: a staged Chrome update no longer puts a version in the user agent that the browser is not serving. Chrome unpacks the next build into a second `<version>\` directory beside the running one and keeps serving the old build until it restarts, so the newest directory could disagree with the client hints (user agent `Chrome/153`, `uaFullVersion` `152.0.7977.82`) — the exact contradiction a detector looks for. With more than one directory the executable's own version resource decides.
 - Upstream roll: a repository with issues disabled (a fork has them off by default) no longer fails the `detect` job. The blocked-issue lookup warns and continues, and a blocked roll that cannot open an issue says so with the report in the job summary and the artifact.

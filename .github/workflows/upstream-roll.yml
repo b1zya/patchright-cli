@@ -47,8 +47,8 @@ jobs:
       too_fresh: ${{ steps.check.outputs.too_fresh }}
       open_issue: ${{ steps.issue.outputs.open_issue }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -84,8 +84,8 @@ jobs:
       branch: ${{ steps.push.outputs.branch }}
       pushed: ${{ steps.push.outputs.pushed }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -104,7 +104,7 @@ jobs:
           if [ "$code" != "0" ] && [ "$code" != "2" ]; then exit "$code"; fi
       # .roll/ is a dot directory: upload-artifact skips hidden files unless told otherwise, and
       # the pull-request job cannot open a PR without this report, so a missing one fails here.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: roll-report
           path: .roll/
@@ -162,10 +162,10 @@ jobs:
       CLASSIFICATION: ${{ needs.roll.outputs.classification }}
       CI_RESULT: ${{ needs.test.result }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.roll.outputs.branch }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: roll-report
           path: .roll

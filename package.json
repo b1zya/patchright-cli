@@ -8,7 +8,7 @@
   },
   "homepage": "https://github.com/b1zya/patchright-cli#readme",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "author": {
     "name": "b1zya"

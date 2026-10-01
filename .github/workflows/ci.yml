@@ -28,15 +28,16 @@ jobs:
       matrix:
         # Google Chrome is preinstalled on all three runner images; no browser download needed.
         os: [ubuntu-latest, windows-latest, macos-15]
-        node: [20, 22]
+        # The supported LTS lines: the floor in package.json engines and the active LTS.
+        node: [22, 24]
         exclude:
           - os: macos-15
-            node: 20
+            node: 22
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -53,7 +54,7 @@ jobs:
       - name: Stealth tests (headed Chrome)
         if: runner.os != 'Linux'
         run: npm run test:stealth
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: test-results-${{ matrix.os }}-node${{ matrix.node }}
