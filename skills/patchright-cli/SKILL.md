@@ -412,7 +412,7 @@ patchright-cli doctor
 patchright-cli install --skills
 ```
 
-Requires Node.js 20+ and Google Chrome (or Microsoft Edge). Headless (the default) needs no display; `--headed` needs one (Linux: `xvfb-run -a`). Platform notes for Linux, Windows and macOS (displays, permissions, Gatekeeper, console windows) are in [references/platforms.md](references/platforms.md).
+Requires Node.js 22+ and Google Chrome (or Microsoft Edge). Headless (the default) needs no display; `--headed` needs one (Linux: `xvfb-run -a`). Platform notes for Linux, Windows and macOS (displays, permissions, Gatekeeper, console windows) are in [references/platforms.md](references/platforms.md).
 
 ## Example: log in with a persistent identity
 

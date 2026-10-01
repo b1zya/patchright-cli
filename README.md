@@ -21,7 +21,7 @@ Because the `patchright-cli` npm name belongs to an unrelated project, this one 
 
 ## Requirements
 
-- Node.js 20 or newer.
+- Node.js 22 or newer.
 - Google Chrome (Microsoft Edge is the fallback). The bundled Chromium works but is detectable and warns.
 - Windows, macOS or Linux. Headless (the default) needs no display; `--headed` needs one (Linux: `xvfb-run -a`; macOS: a logged-in desktop session).
 
