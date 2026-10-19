@@ -207,6 +207,15 @@ patchright-cli resize 1280 900
 patchright-cli close
 ```
 
+### Read, wait, scroll
+
+```bash
+patchright-cli url                      # title ; text ; text e5 --max-chars=2000
+patchright-cli wait-for e7 --state=hidden --timeout=10000   # visible (default), hidden, attached, detached
+patchright-cli wait --url="**/dashboard"   # until the URL matches; wait 1500 just pauses
+patchright-cli scroll-to e42            # into view, as an action would; mousewheel 0 600 scrolls like a person
+```
+
 ### Page preferences and WebMCP
 
 ```bash
@@ -250,6 +259,9 @@ patchright-cli tab-new https://example.com/page   # tab-list ; tab-select 0 ; ta
 patchright-cli state-save auth.json               # state-load auth.json restores it
 patchright-cli cookie-list --domain=example.com   # cookie-get NAME ; cookie-delete NAME ; cookie-clear
 patchright-cli cookie-set session_id abc123 --domain=example.com --httpOnly --secure
+# cookies from a browser extension export or a cookies.txt; export as json or netscape (the files are credentials)
+patchright-cli cookie-import ./cookies.txt --domain=example.com
+patchright-cli cookie-export ./cookies.json --domain=example.com   # --format=netscape for curl and friends
 patchright-cli localstorage-set theme dark        # localstorage-list ; localstorage-get theme ; localstorage-delete theme ; localstorage-clear
 patchright-cli sessionstorage-set step 3          # sessionstorage-list ; sessionstorage-get step ; sessionstorage-delete step ; sessionstorage-clear
 ```

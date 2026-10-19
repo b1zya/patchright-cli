@@ -64,7 +64,68 @@ export const clientFlags: ClientFlag[] = [
   })),
 ];
 
+const timeoutFlag = { name: 'timeout', type: 'string' as FlagType, help: 'give up after this many milliseconds (default 30000; 0 waits forever)' };
+
 export const clientCommands: ClientCommandSpec[] = [
+  {
+    name: 'url',
+    section: 'Shortcuts',
+    usage: 'url',
+    description: 'Print the current page URL.',
+  },
+  {
+    name: 'title',
+    section: 'Shortcuts',
+    usage: 'title',
+    description: 'Print the current page title.',
+  },
+  {
+    name: 'text',
+    section: 'Shortcuts',
+    usage: 'text [target]',
+    description: 'Print the visible text of the page, or of one element (innerText).',
+    args: [{ name: '[target]', help: 'element ref from the snapshot, or a selector; defaults to the whole page' }],
+    flags: [{ name: 'max-chars', type: 'string', help: 'cut the text after this many characters' }],
+  },
+  {
+    name: 'wait',
+    section: 'Shortcuts',
+    usage: 'wait [ms]',
+    description: 'Pause for a number of milliseconds, or with --url wait until the page URL matches a glob (`**/dashboard`) or an exact URL.',
+    args: [{ name: '[ms]', help: 'milliseconds to pause' }],
+    flags: [{ name: 'url', type: 'string', help: 'glob (* stops at /, ** does not) or exact url to wait for' }, timeoutFlag],
+  },
+  {
+    name: 'wait-for',
+    section: 'Shortcuts',
+    usage: 'wait-for <target>',
+    description: 'Wait until an element is visible (or hidden, attached, detached).',
+    args: [{ name: '<target>', help: 'element ref from the snapshot, or a selector' }],
+    flags: [{ name: 'state', type: 'string', help: 'visible (default), hidden, attached or detached' }, timeoutFlag],
+  },
+  {
+    name: 'scroll-to',
+    section: 'Shortcuts',
+    usage: 'scroll-to <target>',
+    description: 'Scroll an element into view, the way an action does before clicking it, and print where it ended up.',
+    args: [{ name: '<target>', help: 'element ref from the snapshot, or a selector' }],
+  },
+  {
+    name: 'cookie-export',
+    section: 'Shortcuts',
+    usage: 'cookie-export [file]',
+    description: 'Write the session cookies to a file (JSON, or Netscape cookies.txt); defaults to a timestamped file in the output dir.',
+    args: [{ name: '[file]', help: 'file to write' }],
+    flags: [{ name: 'format', type: 'string', help: 'json (default, Playwright cookies) or netscape (cookies.txt for curl and friends)' }, { name: 'domain', type: 'string', help: 'only cookies of this domain and its subdomains' }],
+  },
+  {
+    name: 'cookie-import',
+    section: 'Shortcuts',
+    usage: 'cookie-import <file>',
+    description: 'Add cookies from a file: a cookie-editor extension export, a Netscape cookies.txt, a Playwright storage state or cookie array.',
+    args: [{ name: '<file>', help: 'cookie file to read' }],
+    flags: [{ name: 'domain', type: 'string', help: 'only cookies of this domain and its subdomains' }],
+  },
   {
     name: 'env',
     section: 'Stealth',
