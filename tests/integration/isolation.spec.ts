@@ -182,13 +182,13 @@ function watchdogLog(sessionName: string): string {
 
 test('a session nobody comes back to closes itself after the idle timeout', async ({}) => {
   const env = { PATCHRIGHT_CLI_WATCHDOG_INTERVAL_MS: '300' };
-  const opened = await runCli(['-s=idle', 'open', '--idle-timeout=1s', 'data:text/html,<title>idle</title>'], env);
+  // 3s, not less: under parallel load `list` itself can take a second, and must still see the session.
+  const opened = await runCli(['-s=idle', 'open', '--idle-timeout=3s', 'data:text/html,<title>idle</title>'], env);
   expect(opened.exitCode, opened.error).toBe(0);
-  expect((await runCli(['list'], env)).output).toContain('lifetime: closes after 1s without a command');
-  await new Promise(resolve => setTimeout(resolve, 4000));
-  expect((await runCli(['list'], env)).output).toContain('(no browsers)');
-  expect(watchdogLog('idle')).toContain('closing the browser: no command for 1s');
-  expect(watchdogLog('idle')).toContain('closed');
+  expect((await runCli(['list'], env)).output).toContain('lifetime: closes after 3s without a command');
+  await expect.poll(async () => (await runCli(['list'], env)).output, { timeout: 15000 }).toContain('(no browsers)');
+  await expect.poll(() => watchdogLog('idle'), { timeout: 5000 }).toContain('closed');
+  expect(watchdogLog('idle')).toContain('closing the browser: no command for 3s');
 });
 
 test('a session closes when the process that owns it exits, and an explicit close stops the watchdog', async ({}) => {
