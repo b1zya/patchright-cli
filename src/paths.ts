@@ -75,6 +75,11 @@ export function profilesDir(): string {
   return path.join(stateRoot(), 'profiles');
 }
 
+// Named profiles (`open --profile=<name>`): shared by every session and workspace.
+export function namedProfilesDir(): string {
+  return path.join(stateRoot(), 'named-profiles');
+}
+
 // A home-dir substitute with no `.playwright/cli.config.json`, so the daemon does not
 // merge the global config of a playwright-cli installed on the same machine.
 export function noGlobalConfigDir(): string {

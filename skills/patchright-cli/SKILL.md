@@ -111,13 +111,17 @@ patchright-cli -s=shop click e6
 patchright-cli -s=shop identity
 # throw the identity away (deletes the profile)
 patchright-cli -s=shop delete-data
+# the same identity for any session, by name; list and remove named profiles
+patchright-cli -s=checkout open https://shop.example.com --profile=shop-login
+patchright-cli profile-list
+patchright-cli profile-delete shop-login
 # without a name the session is "default"; or set PATCHRIGHT_CLI_SESSION=shop
 ```
 
 - Profiles are persistent by default; `open --isolated` gives a throwaway in-memory profile (a new identity every time, which looks like a new device on every login).
 - Parallel sessions are parallel identities and parallel Chrome windows; tabs inside one session share the identity.
 - Pick a session name once per task and keep it (`login-acme`, `price-scan-42`); do not invent a new name for every command.
-- `--profile=/abs/path` reuses a named identity across workspaces.
+- `--profile=<name>` opens a named identity from any session and any workspace (`--profile=acme-login`); one session holds it at a time, and `open` says which. `profile-list` shows them, `profile-delete <name>` removes one. A value with a path separator (`./dir`, `/abs/path`) is a profile directory.
 - A session nobody comes back to closes itself: in an agent harness, after 30 minutes without a command or when the agent process that opened it exits; `open` says so and `list` shows it. `--idle-timeout=2h` changes the limit, `--idle-timeout=0` and `--no-owner-pid` keep it open, `--owner-pid=<pid>` ties it to another process. The profile stays. Still `close` when a task is done.
 
 See [references/identity.md](references/identity.md) and [references/session-management.md](references/session-management.md).
@@ -351,6 +355,7 @@ patchright-cli open --proxy=http://user:pass@host:3128
 patchright-cli open --proxy=socks5://host:1080 --no-geoip --timezone=Europe/Berlin --locale=de-DE
 patchright-cli open --humanize
 patchright-cli open --isolated                 # throwaway in-memory profile (new identity)
+patchright-cli open --profile=work             # named profile, shared by name across sessions and workspaces
 patchright-cli open --profile=/path/to/profile # explicit persistent profile directory
 patchright-cli open --window-size=1440x900     # instead of maximized
 patchright-cli open --grant=geolocation        # permissions for every origin (unusual for a real user)

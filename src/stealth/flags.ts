@@ -97,6 +97,19 @@ export const clientCommands: ClientCommandSpec[] = [
     description: 'Show the identity of the session profile: browser channel, locale, timezone and geo it was last opened with.',
   },
   {
+    name: 'profile-list',
+    section: 'Stealth',
+    usage: 'profile-list',
+    description: 'List the named profiles (open --profile=<name>): size, the identity each presents, and which session holds it.',
+  },
+  {
+    name: 'profile-delete',
+    section: 'Stealth',
+    usage: 'profile-delete <name>',
+    description: 'Delete a named profile and the identity it carries (logins, cookies, history); refused while a session holds it.',
+    args: [{ name: '<name>', help: 'profile name from profile-list' }],
+  },
+  {
     name: 'doctor',
     section: 'Stealth',
     usage: 'doctor',

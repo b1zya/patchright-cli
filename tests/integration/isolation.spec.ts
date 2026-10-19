@@ -182,26 +182,26 @@ function watchdogLog(sessionName: string): string {
 
 test('a session nobody comes back to closes itself after the idle timeout', async ({}) => {
   const env = { PATCHRIGHT_CLI_WATCHDOG_INTERVAL_MS: '300' };
-  const opened = await runCli(['-s=idle', 'open', '--idle-timeout=1s', 'data:text/html,<title>idle</title>'], env);
+  // 3s, not less: under parallel load `list` itself can take a second, and must still see the session.
+  const opened = await runCli(['-s=idle', 'open', '--idle-timeout=3s', 'data:text/html,<title>idle</title>'], env);
   expect(opened.exitCode, opened.error).toBe(0);
-  expect((await runCli(['list'], env)).output).toContain('lifetime: closes after 1s without a command');
-  await new Promise(resolve => setTimeout(resolve, 4000));
-  expect((await runCli(['list'], env)).output).toContain('(no browsers)');
-  expect(watchdogLog('idle')).toContain('closing the browser: no command for 1s');
-  expect(watchdogLog('idle')).toContain('closed');
+  expect((await runCli(['list'], env)).output).toContain('lifetime: closes after 3s without a command');
+  await expect.poll(async () => (await runCli(['list'], env)).output, { timeout: 15000 }).toContain('(no browsers)');
+  await expect.poll(() => watchdogLog('idle'), { timeout: 5000 }).toContain('closed');
+  expect(watchdogLog('idle')).toContain('closing the browser: no command for 3s');
 });
 
 test('a session closes when the process that owns it exits, and an explicit close stops the watchdog', async ({}) => {
   const env = { PATCHRIGHT_CLI_WATCHDOG_INTERVAL_MS: '300' };
-  const owner = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 8000)'], { stdio: 'ignore' });
+  // Killed below; long enough to outlive a slow launch on a loaded machine.
+  const owner = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 120000)'], { stdio: 'ignore' });
   try {
     const opened = await runCli(['-s=owned', 'open', `--owner-pid=${owner.pid}`, '--idle-timeout=0', 'data:text/html,<title>owned</title>'], env);
     expect(opened.exitCode, opened.error).toBe(0);
     expect((await runCli(['list'], env)).output).toContain(`lifetime: closes when process ${owner.pid} exits`);
     owner.kill();
     await new Promise(resolve => owner.on('exit', resolve));
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    expect((await runCli(['list'], env)).output).toContain('(no browsers)');
+    await expect.poll(async () => (await runCli(['list'], env)).output, { timeout: 15000 }).toContain('(no browsers)');
     expect(watchdogLog('owned')).toContain(`owner process ${owner.pid} exited`);
   } finally {
     owner.kill();
@@ -235,4 +235,29 @@ test('reads the session name from PATCHRIGHT_CLI_SESSION', async ({}) => {
   expect(result.exitCode).toBe(1);
   expect(result.output).toContain(`The browser 'todo' is not open`);
   expect(result.output).toContain('patchright-cli -s=todo open');
+});
+
+test('a named profile is shared by name, held by one session at a time, listed and deleted', async ({}) => {
+  const opened = parseJson(await runCli(['-s=one', 'open', 'data:text/html,one', '--profile=work', '--idle-timeout=0', '--json']));
+  const profileDir = path.join(homeDir(), 'named-profiles', 'work');
+  expect(opened.launch?.profileDir ?? profileDir).toBe(profileDir);
+  expect(fs.existsSync(path.join(profileDir, 'patchright-cli.json'))).toBe(true);
+
+  const second = await runCli(['-s=two', 'open', 'data:text/html,two', '--profile=work', '--idle-timeout=0']);
+  expect(second.exitCode).toBe(1);
+  expect(second.output + second.error).toContain(`Profile 'work' is in use by session 'one'`);
+
+  const listed = parseJson(await runCli(['profile-list', '--json']));
+  expect(listed.profiles).toEqual([expect.objectContaining({ name: 'work', dir: profileDir, inUseBy: `session 'one'` })]);
+  const refused = await runCli(['profile-delete', 'work']);
+  expect(refused.exitCode).toBe(1);
+  expect(refused.output + refused.error).toContain('-s=one close');
+
+  // Reopening the holding session with the same profile is not a conflict.
+  expect((await runCli(['-s=one', 'open', 'data:text/html,again', '--profile=work', '--idle-timeout=0'])).exitCode).toBe(0);
+  expect(await runCli(['-s=one', 'close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
+  expect(parseJson(await runCli(['profile-list', '--json'])).profiles[0].inUseBy).toBeNull();
+  expect((await runCli(['profile-delete', 'work'])).exitCode).toBe(0);
+  expect(fs.existsSync(profileDir)).toBe(false);
+  expect(parseJson(await runCli(['profile-list', '--json'])).profiles).toEqual([]);
 });

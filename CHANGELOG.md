@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Headless sessions keep Chrome's scrollbars: Playwright's `--hide-scrollbars` made them 0 px wide where Chrome on Windows draws 15.
 
 ### Added
+- Named profiles: `open --profile=<name>` keeps an identity under the state root (`named-profiles/<name>`) that any session in any workspace opens by name; a value with a path separator is still a directory. `open` refuses a profile another live session holds and names it, instead of Chrome failing on the locked profile. `profile-list` shows each profile's size, identity and holder; `profile-delete <name>` removes one and is refused while it is held.
 - `recording-start` / `recording-stop` (new upstream commands): record what you do in the window and print it back as code. They carry the new `recorder-injection` warning, because the recorder puts a `__pw_recorder` binding on the page main world and an overlay element on every page until it is stopped.
 - `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.
 - `set-color-scheme`, `set-reduced-motion`, `set-forced-colors`, `set-contrast`, `set-media` and their `clear-*` counterparts (new upstream commands): emulate CSS media features. The `set-*` commands carry the new `media-emulation` warning, because `matchMedia` then disagrees with the operating system setting that system colors and native controls follow.

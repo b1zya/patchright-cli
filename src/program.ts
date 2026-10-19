@@ -34,6 +34,7 @@ import { Session } from './session';
 import { coreBundle, corePackageJSON, dashboardAppPath, serverRegistry, utilsBundle } from './core';
 import { loadUserConfig } from './config/load';
 import { applyCoreEnvInProcess, coreProcessEnv } from './daemonEnv';
+import { assertProfileFree } from './commands/profiles';
 import { loadHelp } from './help';
 import { killAllDaemons } from './killAll';
 import { bundledSkillDir, parseSkillTarget, skillInstallDir, workspaceMarker } from './paths';
@@ -358,6 +359,9 @@ async function startSession(sessionName: string, registry: Registry, clientInfo:
     output.warn({ key: 'config', severity: 'LOW', kind: 'notice', message });
   // Resolved before the launch so a bad --idle-timeout/--owner-pid never leaves a daemon behind.
   const lifetime = resolveLifetime(args, loaded.config, process.env);
+  // Chrome runs one browser per profile; say who holds it instead of failing in the browser.
+  if (mode === 'open' && typeof args.profile === 'string' && args.profile && args.isolated !== true)
+    await assertProfileFree(registry, args.profile, cwd, { session: sessionName, daemonDir: clientInfo.daemonProfilesDir });
 
   const profile = await stealth.resolveLaunchProfile({
     mode,
