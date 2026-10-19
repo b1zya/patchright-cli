@@ -112,6 +112,10 @@ export function applyOverlay(core: HelpJson, generatedFrom: string, o: HelpOverl
     for (const [flag, description] of Object.entries(o.flagHelp[name] ?? {}))
       help = replaceFlagLine(help, flag, description);
     for (const flag of o.addFlags[name] ?? []) {
+      // A client flag owns its name: when upstream grows a flag of the same name (open
+      // --idle-timeout in 1.64), ours is the one that is parsed and documented.
+      if (flag.name in flags)
+        help = removeFlagLine(help, flag.name);
       flags[flag.name] = flag.type;
       help = appendFlagLine(help, flag);
     }

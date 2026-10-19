@@ -100,6 +100,10 @@ test('merge keeps null, drops undefined and replaces arrays', () => {
 
 test('daemon config strips our block and defaults the output dir', () => {
   expect(toDaemonConfig({ stealth: { humanize: true }, timeouts: { action: 5 } }, { outputDir: '/w/.patchright-cli' }))
-      .toEqual({ timeouts: { action: 5 }, outputDir: '/w/.patchright-cli' });
-  expect(toDaemonConfig({ outputDir: '/custom' }, { outputDir: '/w/.patchright-cli' })).toEqual({ outputDir: '/custom' });
+      .toEqual({ timeouts: { action: 5, idle: 0 }, outputDir: '/w/.patchright-cli' });
+  expect(toDaemonConfig({ outputDir: '/custom' }, { outputDir: '/w/.patchright-cli' })).toEqual({ timeouts: { idle: 0 }, outputDir: '/custom' });
+});
+
+test('daemon idle timer is always off: the session lifetime is the watchdog', () => {
+  expect(toDaemonConfig({ idleTimeout: '2h', timeouts: { idle: 5000 } }, { outputDir: '/o' }).timeouts).toEqual({ idle: 0 });
 });

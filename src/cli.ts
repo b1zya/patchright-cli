@@ -21,6 +21,7 @@ import fs from 'fs';
 import https from 'https';
 import path from 'path';
 
+import { processExit } from './bootstrap';
 import { packageJSON } from './core';
 import { watchdogMarker } from './killAll';
 import { env, updateCheckFile } from './paths';
@@ -34,8 +35,8 @@ const RELEASES_URL = 'https://api.github.com/repos/b1zya/patchright-cli/releases
 main().catch(e => {
   /* eslint-disable no-console */
   console.error(e.message);
-  /* eslint-disable no-restricted-properties */
-  process.exit(1);
+  // eslint-disable-next-line no-restricted-syntax
+  processExit(1);
 });
 
 async function main() {

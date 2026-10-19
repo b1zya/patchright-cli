@@ -11,11 +11,15 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - `recording-start` / `recording-stop` (new upstream commands): record what you do in the window and print it back as code. They carry the new `recorder-injection` warning, because the recorder puts a `__pw_recorder` binding on the page main world and an overlay element on every page until it is stopped.
 - `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.
+- `set-color-scheme`, `set-reduced-motion`, `set-forced-colors`, `set-contrast`, `set-media` and their `clear-*` counterparts (new upstream commands): emulate CSS media features. The `set-*` commands carry the new `media-emulation` warning, because `matchMedia` then disagrees with the operating system setting that system colors and native controls follow.
+- `webmcp-list` / `webmcp-call` (new upstream commands): list and call the tools a page registers through WebMCP. They read the page from the utility world and need `--extra-arg=--enable-features=WebMCP`.
+- A negated flag (`--no-<flag>`) is accepted whenever the command declares `no-<flag>` (upstream).
 
 ### Changed
 - Node.js 22 or newer is required: Node 20 reached end of life in April 2026. CI tests the two supported LTS lines, 22 and 24, and the workflows use the action releases that run on Node 24 (`checkout`, `setup-node` and `upload-artifact` v7, `download-artifact` v8).
 
 ### Fixed
+- A headless session no longer closes its browser after an hour without a command. Since patchright-core 1.64 the daemon has an idle timer of its own, on by default for headless browsers it launched; the session lifetime stays ours (`--idle-timeout`, `idleTimeout`, the watchdog), so the daemon config always turns the daemon's timer off. Upstream's `open`/`attach --idle-timeout` (milliseconds, the one-hour default) is not documented next to ours any more: a client flag now replaces an upstream flag of the same name in the help.
 - Windows: a staged Chrome update no longer puts a version in the user agent that the browser is not serving. Chrome unpacks the next build into a second `<version>\` directory beside the running one and keeps serving the old build until it restarts, so the newest directory could disagree with the client hints (user agent `Chrome/153`, `uaFullVersion` `152.0.7977.82`) — the exact contradiction a detector looks for. With more than one directory the executable's own version resource decides.
 - Upstream roll: a repository with issues disabled (a fork has them off by default) no longer fails the `detect` job. The blocked-issue lookup warns and continues, and a blocked roll that cannot open an issue says so with the report in the job summary and the artifact.
 - Upstream workflows: the report artifact is uploaded again, so the pull request gets opened. `upload-artifact@v4` skips hidden files by default and the report lives in `.roll/`, so nothing was uploaded and the `pull-request` job died on the download; the playwright-cli watch has failed this way on every upstream change since playwright-cli 0.1.20. A missing report now fails the upload step itself. The manual online selftest had the same problem with `.patchright-cli/`.
@@ -23,6 +27,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `npm pack` from a working tree no longer picks up the ignored `skills/patchright-cli-workspace/` evaluation runs: `files` names `skills/patchright-cli` instead of `skills`. Release tarballs, built from a clean checkout, are unchanged.
 
 ### Upstream
+- `patchright-core` 1.63.0 -> 1.64.1 (Playwright v1.64.1 sources; patchright fixed a request listener leak and a crash retry loop, no stealth change). The automatic roll was blocked on 11 conflicts: upstream replaced `process.exit` with its internal `processExit` on the same lines as the product rename and our error messages. The client keeps the upstream call sites through a local `processExit` (`src/bootstrap.ts`) instead of requiring patchright-core's bootstrap and its startup side effects.
 - `patchright-core` 1.62.3 -> 1.63.0 (Playwright v1.63.0 sources; patchright fixed closed shadow roots and a negative nth selector boundary). The client layer was ported by hand: upstream rewrote `install` around its own `--init-workspace`, which we deliberately do not spawn, and touched the same lines as the product rename, our activity watchdog and the daemon environment. `npm run roll` gained `--resolved` for exactly this case: a conflict where our side stays never merges cleanly on a rerun, because the base only moves once the roll lands.
 
 ## [0.2.0] - 2026-09-05

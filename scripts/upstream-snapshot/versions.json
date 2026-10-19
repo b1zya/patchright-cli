@@ -1,16 +1,16 @@
 {
   "patchrightCore": {
-    "version": "1.63.0",
-    "playwrightVersion": "1.63.0",
-    "playwrightTag": "v1.63.0",
-    "rolledAt": "2026-09-09",
+    "version": "1.64.1",
+    "playwrightVersion": "1.64.1",
+    "playwrightTag": "v1.64.1",
+    "rolledAt": "2026-10-19",
     "vendorSha256": {
-      "vendor/cli-client/program.ts": "45910efdc2c9a47444532e56b5c508894099ddf1fd86a550cb76a801aeab0108",
-      "vendor/cli-client/session.ts": "25eee666f485c817302e994911e258adf9b96f0911d420d0bd1d45e5a764085e",
+      "vendor/cli-client/program.ts": "8827f5c443099512a285fe6fb2ed26dd3b6fe7f1f1df2e3bdebd328f792f5b79",
+      "vendor/cli-client/session.ts": "ad1809cdf64d90a0e8d0cb653cef605d186c67425b53743ac3199d0eb8b53f8e",
       "vendor/cli-client/registry.ts": "4f48db283c05432704bba2b464a2e5c98eaf9cc4f1b223e295b3b36cb0febc70",
-      "vendor/cli-client/output.ts": "70d033fc8a225c862489266b40cb4d6408ae2ce8d010c6e4173a57bd8ecb994e",
+      "vendor/cli-client/output.ts": "c38a6921568b9d8a7249116f6b9f9898f1e1dd043cb0a431740ee83b5284f124",
       "vendor/cli-client/channelSessions.ts": "8182f2a356e2f8a5092f762585004a6157658fab820e8d2d9a8558a4a99f351c",
-      "vendor/cli-client/cli.ts": "6166a1a007c1895ee4ee227b458b0bcfd895c06ceae85766c54caedb0a077717",
+      "vendor/cli-client/cli.ts": "0e613da46f8f372d1d9b8972a2be3a5b2bf75f9619841aee5f064c8d94876667",
       "vendor/cli-client/minimist.ts": "67d01e52e43a4a107ea3a4ef8166f9bc57b9d17a760821d44f8ea55cf342c66b",
       "vendor/cli-client/socketConnection.ts": "e1fc5fa07e885c3461f620553697db35498d8ea6cd27d952cdeec37ce9853a39"
     }

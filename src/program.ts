@@ -39,6 +39,7 @@ import { killAllDaemons } from './killAll';
 import { bundledSkillDir, parseSkillTarget, skillInstallDir, workspaceMarker } from './paths';
 import { stealth } from './stealth';
 import { minimist } from './args';
+import { processExit } from './bootstrap';
 
 import type { InstallResult, ListData, ListedBrowser, Output } from './output';
 import type { ClientInfo, SessionFile } from './registry';
@@ -133,7 +134,8 @@ export async function program(options?: { embedderVersion?: string }) {
       lines.push(help.global);
       output.help(lines.join('\n\n'));
     }
-    process.exit(0);
+    // eslint-disable-next-line no-restricted-syntax
+    processExit(0);
   }
 
   if (!command)
@@ -514,8 +516,12 @@ function validateFlags(args: MinimistArgs, command: { flags: Record<string, 'boo
       continue;
     if (stealth.clientOnlyFlags.includes(key))
       continue;
-    if (!(key in command.flags))
-      unknownFlags.push(key);
+    if (key in command.flags)
+      continue;
+    // Negated flags like '--no-shell' are parsed as { shell: false }.
+    if (args[key] === false && `no-${key}` in command.flags)
+      continue;
+    unknownFlags.push(key);
   }
   if (unknownFlags.length)
     output.errorUnknownOption(unknownFlags, command.help);

@@ -53,6 +53,11 @@ test('client-only flags and commands are documented and parseable', () => {
   expect(help.commands.eval.flags['main-world']).toBe('boolean');
   expect(help.commands.attach.flags.extension).toBeUndefined();
   expect(help.commands.attach.help).not.toContain('--extension');
+  // Upstream's own --idle-timeout (milliseconds, a one-hour default) is replaced by ours.
+  for (const command of ['open', 'attach']) {
+    expect(help.commands[command].help.match(/^\s{2}--idle-timeout\b/gm), command).toHaveLength(1);
+    expect(help.commands[command].help, command).toContain('30m, 2h, 90s');
+  }
   for (const flag of ['headless', 'isolated', 'geoip', 'humanize', 'main-world', 'focus-emulation'])
     expect(help.booleanOptions, flag).toContain(flag);
   for (const name of ['identity', 'doctor', 'selftest']) {
