@@ -21,6 +21,7 @@
 
 import fs from 'fs';
 
+import { interactiveSnapshotRewrite } from '../commands/interactiveSnapshot';
 import { humanizeRewrite } from '../humanize';
 import { locatorExpression } from './locator';
 import { leak, notice } from './warnings';
@@ -180,6 +181,8 @@ function guardCommandInner(name: string, args: MinimistArgs, ctx: CommandContext
         warnings.push(leak('route-shadows-init'));
       return { kind: 'allow', warnings };
     }
+    case 'snapshot':
+      return args.interactive ? interactiveSnapshotRewrite(args, ctx.output, process.cwd()) : { kind: 'allow' };
     case 'highlight':
       return args.hide ? { kind: 'allow' } : { kind: 'allow', warnings: [leak('highlight-dom')] };
     case 'video-show-actions':

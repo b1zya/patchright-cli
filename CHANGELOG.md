@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `install --global` (alias `-g`) is a real flag now that the daemon takes it; it needs `--skills`, and says so instead of ignoring it.
 - `set-color-scheme`, `set-reduced-motion`, `set-forced-colors`, `set-contrast`, `set-media` and their `clear-*` counterparts (new upstream commands): emulate CSS media features. The `set-*` commands carry the new `media-emulation` warning, because `matchMedia` then disagrees with the operating system setting that system colors and native controls follow.
 - `webmcp-list` / `webmcp-call` (new upstream commands): list and call the tools a page registers through WebMCP. They read the page from the utility world and need `--extra-arg=--enable-features=WebMCP`.
+- `snapshot --interactive`: only what can be acted on (interactive roles and `[cursor=pointer]` elements, each with its subtree), plus headings and named landmarks for orientation; printed inline (or to `--filename`, or as a pruned `--json` tree), with the daemon's refs, so `click`/`fill` take them as usual. About half the size of a full snapshot on a link-heavy article, far less on forms and applications.
 - A negated flag (`--no-<flag>`) is accepted whenever the command declares `no-<flag>` (upstream).
 
 ### Changed

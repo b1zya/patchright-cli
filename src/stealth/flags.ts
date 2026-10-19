@@ -53,6 +53,7 @@ export const clientFlags: ClientFlag[] = [
     { command, name: 'idle-timeout', type: 'string' as FlagType, help: 'close the browser after this long without a command (30m, 2h, 90s; 0 keeps it open). default: 30m inside an agent harness, never otherwise' },
     { command, name: 'owner-pid', type: 'string' as FlagType, help: 'close the browser when this process exits; defaults to PATCHRIGHT_CLI_OWNER_PID or CLAUDE_PID when set and alive, --no-owner-pid disables' },
   ]),
+  { command: 'snapshot', name: 'interactive', type: 'boolean', help: 'only what can be acted on (links, buttons, inputs, clickable elements) plus headings and named landmarks; refs stay valid' },
   { command: 'eval', name: 'main-world', type: 'boolean', help: 'evaluate in the page main world: sees page globals, but is observable by the page' },
   { command: 'run-code', name: 'force', type: 'boolean', help: 'run code the safety scan would refuse (Runtime.enable is never allowed)' },
   ...['click', 'dblclick', 'hover', 'drag', 'mousemove', 'mousewheel', 'type', 'fill'].map(command => ({

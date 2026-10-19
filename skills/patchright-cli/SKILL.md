@@ -394,6 +394,7 @@ patchright-cli snapshot "#main"                  # an element instead of the who
 patchright-cli snapshot --depth=4                # limit depth, then snapshot a subtree
 patchright-cli snapshot e34
 patchright-cli snapshot --boxes                  # include [box=x,y,width,height]
+patchright-cli snapshot --interactive            # only controls, headings and named landmarks; prints inline, refs stay valid
 patchright-cli find "Add to cart"                # search instead of capturing everything
 patchright-cli find --regex "\\$[0-9]+\\.[0-9]{2}"
 ```
