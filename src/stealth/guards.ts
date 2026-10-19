@@ -164,6 +164,16 @@ function guardCommandInner(name: string, args: MinimistArgs, ctx: CommandContext
         return { kind: 'rewrite', args: { _: ['run-code', windowResizeCode(width, height)] }, raw: true };
       return { kind: 'allow', warnings: [leak('viewport-emulation')] };
     }
+    // emulateMedia: color scheme, reduced motion, forced colors, contrast, media type. The
+    // clear-* counterparts restore the real values and stay silent. webmcp-list/-call run in
+    // the utility world and fail unless the browser was launched with --enable-features=WebMCP
+    // (that switch goes through --extra-arg and its warning).
+    case 'set-color-scheme':
+    case 'set-reduced-motion':
+    case 'set-forced-colors':
+    case 'set-contrast':
+    case 'set-media':
+      return { kind: 'allow', warnings: [leak('media-emulation')] };
     case 'route': {
       const warnings = [leak('route-cache')];
       if (ctx.userConfig.browser?.initScript?.length)

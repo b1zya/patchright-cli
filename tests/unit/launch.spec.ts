@@ -46,6 +46,6 @@ test('noop stealth passes the user config through and defaults the output dir', 
     daemonProfilesDir: '/root/daemon/hash',
   });
   expect(profile.daemonFlags).toEqual({ headed: true });
-  expect(profile.daemonConfig).toEqual({ browser: { launchOptions: { channel: 'msedge' } }, outputDir: path.join('/ws', '.patchright-cli') });
+  expect(profile.daemonConfig).toEqual({ browser: { launchOptions: { channel: 'msedge' } }, timeouts: { idle: 0 }, outputDir: path.join('/ws', '.patchright-cli') });
   expect(profile.warnings).toEqual([]);
 });

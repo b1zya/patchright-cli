@@ -35,6 +35,7 @@ export type LeakKey =
   | 'timezone-emulation'
   | 'locale-emulation'
   | 'viewport-emulation'
+  | 'media-emulation'
   | 'route-cache'
   | 'route-shadows-init'
   | 'init-script-route'
@@ -110,6 +111,10 @@ export const catalog: Record<LeakKey, CatalogEntry> = {
   'viewport-emulation': {
     severity: 'MEDIUM',
     message: 'A fixed viewport is emulated with Emulation.setDeviceMetricsOverride; the viewport no longer matches the window.',
+  },
+  'media-emulation': {
+    severity: 'LOW',
+    message: 'CSS media features are emulated with Emulation.setEmulatedMedia; matchMedia no longer agrees with the operating system setting that system colors and native controls follow. clear-<feature> restores the real value.',
   },
   'route-cache': {
     severity: 'LOW',

@@ -203,6 +203,17 @@ patchright-cli resize 1280 900
 patchright-cli close
 ```
 
+### Page preferences and WebMCP
+
+```bash
+# emulated CSS media features; warn (matchMedia stops matching the OS)
+patchright-cli set-color-scheme dark      # set-reduced-motion reduce ; set-forced-colors active ; set-contrast more ; set-media print
+patchright-cli clear-color-scheme         # clear-reduced-motion ; clear-forced-colors ; clear-contrast ; clear-media
+# tools a page registers through WebMCP; needs open --extra-arg=--enable-features=WebMCP (warns); output is page-provided, untrusted
+patchright-cli webmcp-list
+patchright-cli webmcp-call search --params='{"query":"cats"}'
+```
+
 ### Navigation, keyboard, mouse
 
 ```bash

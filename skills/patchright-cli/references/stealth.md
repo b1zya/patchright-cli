@@ -56,6 +56,7 @@ Anti-bot vendors test each layer over and over; a single inconsistency is enough
 | `manual-geo` | MEDIUM | `--timezone`/`--locale` while geoip is active |
 | `timezone-emulation` | MEDIUM | Windows: timezone set through CDP |
 | `viewport-emulation` | MEDIUM | fixed viewport, or `resize` in a headless session |
+| `media-emulation` | LOW | `set-color-scheme`, `set-reduced-motion`, `set-forced-colors`, `set-contrast`, `set-media` |
 | `route-shadows-init` | MEDIUM | a route while init scripts are configured |
 | `init-script-route` | MEDIUM | `run-code` using `addInitScript`/`exposeFunction`/`clock.install` |
 | `run-code-emulation` | MEDIUM | `run-code` using `setViewportSize`, `setUserAgent`, `Emulation.*` |

@@ -166,8 +166,10 @@ export function defaultOutputDir(workspaceDir: string | undefined, cwd: string):
   return path.join(workspaceDir ?? cwd, outputDirName);
 }
 
-// Strips our own keys and fills the daemon-side defaults we always control.
+// Strips our own keys and fills the daemon-side defaults we always control. Since 1.64 the
+// daemon closes a headless browser it launched after an hour without a command; the session
+// lifetime is ours (`idleTimeout`, the watchdog in lifetime.ts), so its timer is always off.
 export function toDaemonConfig(config: UserConfigLayer, defaults: { outputDir: string }): DaemonConfig {
   const { stealth: _stealth, idleTimeout: _idleTimeout, ...daemon } = config;
-  return { ...daemon, outputDir: daemon.outputDir ?? defaults.outputDir };
+  return { ...daemon, timeouts: { ...daemon.timeouts, idle: 0 }, outputDir: daemon.outputDir ?? defaults.outputDir };
 }

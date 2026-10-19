@@ -38,7 +38,7 @@ export type DaemonBrowserConfig = {
 export type DaemonConfig = {
   browser?: DaemonBrowserConfig;
   network?: { allowedOrigins?: string[], blockedOrigins?: string[] };
-  timeouts?: { action?: number, navigation?: number, expect?: number, settle?: number };
+  timeouts?: { action?: number, navigation?: number, expect?: number, settle?: number, idle?: number };
   outputDir?: string;
   [key: string]: unknown;
 };

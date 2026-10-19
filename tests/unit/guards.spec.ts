@@ -110,6 +110,13 @@ test('resize moves the real window in headed sessions and warns otherwise', () =
   expect(guardCommand('resize', { _: ['resize', 'x', '700'] }, ctx({ headless: false })).kind).toBe('allow');
 });
 
+test('media emulation warns, clearing it and webmcp stay silent', () => {
+  for (const command of ['set-color-scheme', 'set-reduced-motion', 'set-forced-colors', 'set-contrast', 'set-media'])
+    expect(keys(guardCommand(command, { _: [command, 'x'] }, ctx()))).toEqual(['media-emulation']);
+  for (const command of ['clear-color-scheme', 'clear-reduced-motion', 'clear-forced-colors', 'clear-contrast', 'clear-media', 'webmcp-list', 'webmcp-call'])
+    expect(guardCommand(command, { _: [command] }, ctx())).toEqual({ kind: 'allow' });
+});
+
 test('route, highlight, tracing and pdf policies', () => {
   expect(keys(guardCommand('route', { _: ['route', '**/api'] }, ctx()))).toEqual(['route-cache']);
   expect(keys(guardCommand('route', { _: ['route', '**/api'] }, ctx({ initScript: ['/x.js'] })))).toEqual(['route-cache', 'route-shadows-init']);

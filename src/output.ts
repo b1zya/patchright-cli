@@ -18,10 +18,10 @@
 // Forked from playwright-core/src/tools/cli-client/output.ts (v1.62.1).
 
 /* eslint-disable no-console */
-/* eslint-disable no-restricted-properties */
 
 import path from 'path';
 
+import { processExit } from './bootstrap';
 import { describeLaunch } from './stealth/launchProfile';
 
 import type { ChannelSession } from './channelSessions';
@@ -140,21 +140,24 @@ export class TextOutput implements Output {
   errorUnknownCommand(name: string | undefined, globalHelp: string): never {
     console.error(`Unknown command: ${name}\n`);
     console.log(globalHelp);
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorUnknownOption(opts: string[], commandHelp: string): never {
     console.error(`Unknown option${opts.length > 1 ? 's' : ''}: ${opts.map(f => `--${f}`).join(', ')}`);
     console.log('');
     console.log(commandHelp);
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorTooManyArguments(expected: number, received: number, commandHelp: string): never {
     console.error(`error: too many arguments: expected ${expected}, received ${received}`);
     console.log('');
     console.log(commandHelp);
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorAttachConflict(): never {
@@ -181,7 +184,8 @@ export class TextOutput implements Output {
 
   errorInstallGlobalRequiresSkills(): never {
     console.error(`Error: --global requires --skills`);
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   list({ all, browsers, servers, channelSessions }: ListData): void {
@@ -350,17 +354,20 @@ export class JsonOutput implements Output {
 
   errorUnknownCommand(name: string | undefined, _globalHelp: string): never {
     this._emit({ isError: true, error: `Unknown command: ${name}` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorUnknownOption(opts: string[], _commandHelp: string): never {
     this._emit({ isError: true, error: `Unknown option${opts.length > 1 ? 's' : ''}: ${opts.map(f => `--${f}`).join(', ')}` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorTooManyArguments(expected: number, received: number, _commandHelp: string): never {
     this._emit({ isError: true, error: `error: too many arguments: expected ${expected}, received ${received}` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorAttachConflict(): never {
@@ -370,12 +377,14 @@ export class JsonOutput implements Output {
 
   errorDetachNotAttached(session: string): never {
     this._emit({ isError: true, error: `session '${session}' was not attached; use close to stop it.` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorBrowserNotOpenForTool(session: string): never {
     this._emit({ isError: true, error: `The browser '${session}' is not open, please run open first` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   errorAttachNoTarget(): never {
@@ -385,7 +394,8 @@ export class JsonOutput implements Output {
 
   errorInstallGlobalRequiresSkills(): never {
     this._emit({ isError: true, error: `--global requires --skills` });
-    return process.exit(1);
+    // eslint-disable-next-line no-restricted-syntax
+    return processExit(1);
   }
 
   list({ all, browsers, servers, channelSessions }: ListData): void {
