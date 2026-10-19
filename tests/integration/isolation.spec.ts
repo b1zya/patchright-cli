@@ -193,15 +193,15 @@ test('a session nobody comes back to closes itself after the idle timeout', asyn
 
 test('a session closes when the process that owns it exits, and an explicit close stops the watchdog', async ({}) => {
   const env = { PATCHRIGHT_CLI_WATCHDOG_INTERVAL_MS: '300' };
-  const owner = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 8000)'], { stdio: 'ignore' });
+  // Killed below; long enough to outlive a slow launch on a loaded machine.
+  const owner = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 120000)'], { stdio: 'ignore' });
   try {
     const opened = await runCli(['-s=owned', 'open', `--owner-pid=${owner.pid}`, '--idle-timeout=0', 'data:text/html,<title>owned</title>'], env);
     expect(opened.exitCode, opened.error).toBe(0);
     expect((await runCli(['list'], env)).output).toContain(`lifetime: closes when process ${owner.pid} exits`);
     owner.kill();
     await new Promise(resolve => owner.on('exit', resolve));
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    expect((await runCli(['list'], env)).output).toContain('(no browsers)');
+    await expect.poll(async () => (await runCli(['list'], env)).output, { timeout: 15000 }).toContain('(no browsers)');
     expect(watchdogLog('owned')).toContain(`owner process ${owner.pid} exited`);
   } finally {
     owner.kill();
