@@ -5,7 +5,9 @@ An identity is a persistent Chrome profile plus the geo-derived values it was la
 ## Where profiles live
 
 - Default: one per session name under the tool's state root (`<cache>/patchright-cli/daemon/<workspace-hash>/ud-<session>-<channel>/`). `patchright-cli identity` prints the path.
-- `open --profile=/abs/path` uses an explicit directory, which is how one identity is shared across workspaces.
+- `open --profile=<name>` (a bare name such as `work` or `acme-login`) uses a named profile under `<cache>/patchright-cli/named-profiles/<name>/`. Any session in any workspace opens the same identity by name; `profile-list` shows each one's size, identity and holder, `profile-delete <name>` removes it.
+- `open --profile=./dir` or `--profile=/abs/path` (anything with a path separator) uses that directory instead.
+- Chrome runs one browser per profile: `open` refuses a profile another live session holds and names that session. Work in it, or `close` it first.
 - `open --isolated` uses an in-memory profile: nothing survives `close`, and every open is a new identity.
 
 ## The identity file

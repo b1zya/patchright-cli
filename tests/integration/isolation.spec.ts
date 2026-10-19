@@ -236,3 +236,28 @@ test('reads the session name from PATCHRIGHT_CLI_SESSION', async ({}) => {
   expect(result.output).toContain(`The browser 'todo' is not open`);
   expect(result.output).toContain('patchright-cli -s=todo open');
 });
+
+test('a named profile is shared by name, held by one session at a time, listed and deleted', async ({}) => {
+  const opened = parseJson(await runCli(['-s=one', 'open', 'data:text/html,one', '--profile=work', '--idle-timeout=0', '--json']));
+  const profileDir = path.join(homeDir(), 'named-profiles', 'work');
+  expect(opened.launch?.profileDir ?? profileDir).toBe(profileDir);
+  expect(fs.existsSync(path.join(profileDir, 'patchright-cli.json'))).toBe(true);
+
+  const second = await runCli(['-s=two', 'open', 'data:text/html,two', '--profile=work', '--idle-timeout=0']);
+  expect(second.exitCode).toBe(1);
+  expect(second.output + second.error).toContain(`Profile 'work' is in use by session 'one'`);
+
+  const listed = parseJson(await runCli(['profile-list', '--json']));
+  expect(listed.profiles).toEqual([expect.objectContaining({ name: 'work', dir: profileDir, inUseBy: `session 'one'` })]);
+  const refused = await runCli(['profile-delete', 'work']);
+  expect(refused.exitCode).toBe(1);
+  expect(refused.output + refused.error).toContain('-s=one close');
+
+  // Reopening the holding session with the same profile is not a conflict.
+  expect((await runCli(['-s=one', 'open', 'data:text/html,again', '--profile=work', '--idle-timeout=0'])).exitCode).toBe(0);
+  expect(await runCli(['-s=one', 'close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
+  expect(parseJson(await runCli(['profile-list', '--json'])).profiles[0].inUseBy).toBeNull();
+  expect((await runCli(['profile-delete', 'work'])).exitCode).toBe(0);
+  expect(fs.existsSync(profileDir)).toBe(false);
+  expect(parseJson(await runCli(['profile-list', '--json'])).profiles).toEqual([]);
+});

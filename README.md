@@ -69,7 +69,7 @@ The skill tells agents when a window is worth it (interactive login or a one-tim
 | browser | Google Chrome, then Edge, then bundled Chromium | Patchright's validated configuration; real brands, codecs | `--browser=` | `bundled-chromium` (unsilenceable) |
 | mode | headless (no window); `--headed` for a maximized real window | the least intrusive mode that works everywhere; headed removes the headless tells when a task is protection-sensitive | `--headed`, `--headless`, config `stealth.headless` | `headless` (only together with `--proxy`) |
 | headed window | `--test-type=` added | Chrome shows an "unsupported command-line flag" bar for Patchright's `--disable-blink-features=AutomationControlled`; this switch (Playwright uses it for its own windows) suppresses it and is not page-visible as far as known | your own `--test-type` via `--extra-arg` or config | — |
-| profile | persistent, one per session | a warm profile is a returning visitor | `--isolated`, `--profile=` | — |
+| profile | persistent, one per session | a warm profile is a returning visitor | `--isolated`, `--profile=<name or dir>` | — |
 | viewport | `null` (the real window) | no `setDeviceMetricsOverride` | config `contextOptions.viewport` | `viewport-emulation` |
 | color scheme, motion, contrast | `no-override` | Playwright forces light/no-motion by default | config | — |
 | user agent, locale, timezone | untouched | emulation is observable | `--locale`, `--timezone`, config | `manual-geo`, `user-agent` |

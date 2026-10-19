@@ -80,6 +80,7 @@ export const overlay: HelpOverlay = {
       config: 'path to a patchright-cli config file, defaults to .playwright/patchright-cli.config.json',
       headed: 'run headed (visible window); the default is headless. use for interactive login, captchas, manual inspection, debugging you must watch, or a site that blocks headless. needs a display (xvfb-run -a on headless linux). --headful is an alias',
       persistent: 'use the persistent per-session profile (already the default; see --isolated)',
+      profile: 'a named profile any session can open (e.g. --profile=work; see profile-list), or a path to a user data directory (./dir, /abs/dir)',
     },
     attach: {
       config: 'path to a patchright-cli config file, defaults to .playwright/patchright-cli.config.json',

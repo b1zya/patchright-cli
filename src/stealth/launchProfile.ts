@@ -23,6 +23,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { detectDisplay } from '../commands/env';
+import { resolveProfileDir } from '../commands/profiles';
 import { defaultOutputDir, toDaemonConfig } from '../config/load';
 import { writeState } from '../humanize/state';
 import { coreBundledVersionFinder, coreExecutableFinder, coreVersionForExecutable, customChannel, resolveChannel } from './browsers';
@@ -136,7 +137,7 @@ export function writeAcceptLanguagePreference(profileDir: string, locale: string
 }
 
 export function profileDirFor(request: LaunchRequest, channel: string, explicit?: string): string {
-  return explicit ? path.resolve(request.cwd, explicit) : path.join(request.daemonProfilesDir, `ud-${request.sessionName}-${channel}`);
+  return explicit ? resolveProfileDir(explicit, request.cwd) : path.join(request.daemonProfilesDir, `ud-${request.sessionName}-${channel}`);
 }
 
 export function createLaunchProfileResolver(deps: LaunchDeps) {
@@ -193,8 +194,9 @@ export function createLaunchProfileResolver(deps: LaunchDeps) {
     const flags: DaemonFlags = {};
     if (!isolated)
       flags.persistent = true;
+    // A bare name is a named profile under the state root; the daemon gets the directory.
     if (explicitProfile)
-      flags.profile = explicitProfile;
+      flags.profile = resolveProfileDir(explicitProfile, request.cwd);
     if (args.mobile) {
       flags.mobile = true;
       warnings.push(leak('device-emulation', '--mobile'));

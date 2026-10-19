@@ -28,6 +28,7 @@ import { consoleCommand } from '../commands/console';
 import { doctorCommand } from '../commands/doctor';
 import { envCommand } from '../commands/env';
 import { identityCommand } from '../commands/identity';
+import { profileDeleteCommand, profileListCommand } from '../commands/profiles';
 import { selftestCommand } from '../commands/selftest';
 import { waitForUserCommand } from '../commands/waitForUser';
 import { defaultOutputDir, toDaemonConfig } from '../config/load';
@@ -156,6 +157,6 @@ export const noopStealth: StealthLayer = {
 export const stealth: StealthLayer = {
   resolveLaunchProfile,
   guardCommand,
-  extraCommands: [consoleCommand, configPrintCommand, identityCommand, doctorCommand, selftestCommand, envCommand, batchCommand, waitForUserCommand],
+  extraCommands: [consoleCommand, configPrintCommand, identityCommand, doctorCommand, selftestCommand, envCommand, batchCommand, waitForUserCommand, profileListCommand, profileDeleteCommand],
   clientOnlyFlags: clientOnlyFlagNames,
 };
