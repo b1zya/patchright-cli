@@ -1,9 +1,9 @@
 {
   "patchrightCore": {
-    "version": "1.64.1",
+    "version": "1.64.2",
     "playwrightVersion": "1.64.1",
     "playwrightTag": "v1.64.1",
-    "rolledAt": "2026-10-19",
+    "rolledAt": "2026-11-01",
     "vendorSha256": {
       "vendor/cli-client/program.ts": "8827f5c443099512a285fe6fb2ed26dd3b6fe7f1f1df2e3bdebd328f792f5b79",
       "vendor/cli-client/session.ts": "ad1809cdf64d90a0e8d0cb653cef605d186c67425b53743ac3199d0eb8b53f8e",
