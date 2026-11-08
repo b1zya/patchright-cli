@@ -40,6 +40,18 @@ jobs:
       - name: Environment report
         run: node bin/patchright-cli.js doctor || echo "doctor reported issues (see above)"
       - run: npm run test:unit
+      # A fresh runner reads the preinstalled Chrome from a cold disk: its first launch has taken
+      # up to a minute, which landed in the 60 s budget of whichever integration tests ran first
+      # and in the 10 s `chrome --version` probe (headless-user-agent-unknown instead of the
+      # headless-user-agent note). Pay that cost once here, outside any test.
+      - name: Warm up Chrome
+        timeout-minutes: 5
+        continue-on-error: true
+        env:
+          PATCHRIGHT_CLI_HOME: ${{ runner.temp }}/warmup
+        run: |
+          node bin/patchright-cli.js -s=warmup open about:blank
+          node bin/patchright-cli.js -s=warmup close
       - run: npm run test:integration
       - name: Stealth tests (headed Chrome)
         if: runner.os == 'Linux'
