@@ -192,11 +192,25 @@ jobs:
             gh pr edit "$number" --body-file body.md --add-label "$labels"
           fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
+      # Each roll starts from main, so an older roll still open is only noise: close it in favour
+      # of this one. A manual run for an older version leaves newer rolls alone.
+      - name: Close older roll pull requests
+        env:
+          NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          for old in $(gh pr list --state open --json headRefName --jq '.[].headRefName | select(startswith("roll_"))'); do
+            [ "$old" = "$BRANCH" ] && continue
+            [ "$(printf '%s\n%s\n' "${old#roll_}" "$TARGET" | sort -V | tail -n 1)" = "$TARGET" ] || continue
+            gh pr close "$old" --delete-branch --comment "Superseded by #$NUMBER (patchright-core $TARGET)." \
+              || echo "::warning::Could not close $old, superseded by #$NUMBER."
+          done
+      # A push by this workflow's token gets its pull_request CI run held for approval, and the
+      # ruleset only counts checks from that run, so the merge below fails until someone approves it.
       - name: Merge automatically (safe roll, green CI)
         if: env.CLASSIFICATION == 'safe' && steps.ci.outputs.result == 'success'
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" --squash --delete-branch \
-            || gh pr comment "${{ steps.pr.outputs.number }}" --body "The roll is safe and CI is green, but the workflow could not merge (the \`main\` ruleset or repository settings). Merge by hand."
+            || gh pr comment "${{ steps.pr.outputs.number }}" --body "The roll is safe and CI is green, but the workflow could not merge: the \`main\` ruleset counts only the pull request's own CI run, which GitHub holds for approval on a push by the workflow token. Approve that run (Actions, the \`CI\` run marked *action required* on this branch), wait for it to pass, then merge."
       - name: Explain why the pull request stays open
         if: env.CLASSIFICATION != 'safe' || steps.ci.outputs.result != 'success'
         env:
