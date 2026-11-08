@@ -49,10 +49,10 @@
     "patchright-core": "1.64.3"
   },
   "devDependencies": {
-    "@types/node": "^25.2.1",
-    "esbuild": "^0.25.12",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
     "patchright": "1.64.3",
-    "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }
