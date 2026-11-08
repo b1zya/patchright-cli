@@ -20,7 +20,17 @@ import { test, expect } from 'patchright/test';
 
 import { runCli } from '../fixtures';
 
-test('open data URL', async ({}) => {
+test('open data URL', { annotation: { type: 'issue', description: 'https://github.com/microsoft/playwright-cli/issues/502' } }, async ({}) => {
+  const argumentError = "boolean option '--headed' should not be passed with '=value', use '--headed' or '--no-headed' instead";
+  expect(await runCli(['open', '--headed=false'])).toEqual({
+    output: '',
+    error: argumentError,
+    exitCode: 1,
+  });
+  // Upstream also expects `--json` to wrap argument errors as { isError, error } on stdout
+  // (microsoft/playwright-cli#522); that client change ships after Playwright 1.64, so it
+  // arrives with a later patchright-core roll.
+
   expect(await runCli(['open', 'data:text/html,hello', '--persistent'])).toEqual(expect.objectContaining({
     output: expect.stringContaining('hello'),
     exitCode: 0,
