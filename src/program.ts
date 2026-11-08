@@ -34,6 +34,7 @@ import { Session } from './session';
 import { coreBundle, corePackageJSON, dashboardAppPath, serverRegistry, utilsBundle } from './core';
 import { loadUserConfig } from './config/load';
 import { applyCoreEnvInProcess, coreProcessEnv } from './daemonEnv';
+import { collectHome, renderHome } from './commands/home';
 import { assertProfileFree } from './commands/profiles';
 import { loadHelp } from './help';
 import { killAllDaemons } from './killAll';
@@ -125,13 +126,21 @@ export async function program(options?: { embedderVersion?: string }) {
   }
 
   const command = commandName && help.commands[commandName];
+  const agentSkill = process.env.CLAUDECODE || process.env.COPILOT_CLI ? path.relative(process.cwd(), path.join(bundledSkillDir(), 'SKILL.md')) : undefined;
+  // A bare run is the home view (src/commands/home.ts): live sessions and what to run next.
+  if (!commandName && !args.help && !args.h) {
+    const home = await collectHome({ registry: await Registry.load(), clientInfo, version: options?.embedderVersion ?? clientInfo.version, core: corePackageJSON.version, skill: agentSkill });
+    output.toolResult(output.json ? JSON.stringify(home, null, 2) : renderHome(home));
+    // eslint-disable-next-line no-restricted-syntax
+    processExit(0);
+  }
   if (args.help || args.h || !commandName) {
     if (command) {
       output.help(command.help);
     } else {
       const lines = [`patchright-cli - anti-detection browser automation for AI agents (${corePackageJSON.name} ${corePackageJSON.version})`];
-      if (process.env.CLAUDECODE || process.env.COPILOT_CLI)
-        lines.push(`Agent skill: ${path.relative(process.cwd(), path.join(bundledSkillDir(), 'SKILL.md'))}`);
+      if (agentSkill)
+        lines.push(`Agent skill: ${agentSkill}`);
       lines.push(help.global);
       output.help(lines.join('\n\n'));
     }

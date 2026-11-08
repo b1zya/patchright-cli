@@ -43,7 +43,11 @@ Once per session, before the first browser command:
 
 ```bash
 patchright-cli env
+# what is already open in this workspace: sessions, their current page, what to run next
+patchright-cli
 ```
+
+A bare `patchright-cli` is the home view, not the manual (that is `--help`). It lists the live sessions of this workspace with their mode, profile, tab count, current page and lifetime, then the next commands; `--json` gives the same as data. It starts nothing and does not keep an idle session alive. When the browser you need is already open there, continue it with its `-s=<name>` instead of opening another one.
 
 It prints the shell it detected, the console encoding, whether a display exists, the host locale and timezone, the agent host and sandbox markers, whether the state root is writable, and the quoting rules that apply here (`--json` for a structured version, `--probe` also checks network access). Follow those rules for every later command; the CLI never changes the console settings itself. If a `find` or `eval` unexpectedly reports nothing, or a `[msys-path-conversion]` warning appears, the shell mangled the argument: fix the invocation, do not conclude the page lacks the content.
 
@@ -330,6 +334,8 @@ patchright-cli doctor
 ### Sessions and setup
 
 ```bash
+# home view: live sessions of this workspace and the next commands
+patchright-cli
 patchright-cli list
 patchright-cli close-all
 patchright-cli kill-all

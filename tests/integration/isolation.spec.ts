@@ -77,6 +77,27 @@ test('help and version are branded', async ({}) => {
   expect(version).toEqual({ version: expect.any(String), core: { name: 'patchright-core', version: expect.any(String) } });
 });
 
+test('a bare run shows the live sessions of this workspace and what to run next', async ({}) => {
+  const empty = await runCli([]);
+  expect(empty.exitCode).toBe(0);
+  expect(empty.output).toContain('No browser open in this workspace.');
+  expect(empty.output).toContain('patchright-cli open <url>');
+  expect(empty.output).not.toContain('Usage:');
+
+  expect(await runCli(['-s=work', 'open', 'data:text/html,<title>Home test</title>hi'])).toEqual(expect.objectContaining({ exitCode: 0 }));
+  const home = await runCli([]);
+  expect(home.output).toContain('Browsers open in this workspace (1):');
+  expect(home.output).toMatch(/- work: headless chrome, 1 tab, current "Home test" data:text\/html/);
+  expect(home.output).toContain('patchright-cli -s=work snapshot');
+
+  const data = parseJson(await runCli(['--json']));
+  expect(data.sessions).toEqual([expect.objectContaining({ name: 'work', status: 'open', tabs: 1, current: expect.objectContaining({ title: 'Home test' }) })]);
+
+  // The manual is still one flag away.
+  expect((await runCli(['--help'])).output).toContain('Usage:');
+  expect(await runCli(['-s=work', 'close'])).toEqual(expect.objectContaining({ exitCode: 0 }));
+});
+
 test('env reports the shell, encoding, display and rules without a browser', async ({}) => {
   const result = await runCli(['env', '--json'], { MSYSTEM: 'MINGW64', CI: '1' });
   expect(result.exitCode, result.error).toBe(0);
